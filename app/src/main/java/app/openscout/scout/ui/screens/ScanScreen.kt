@@ -67,6 +67,7 @@ fun ScanScreen(onResult: (String) -> Unit, onBack: () -> Unit) {
     LaunchedEffect(Unit) { if (!granted) launcher.launch(Manifest.permission.CAMERA) }
 
     var delivered by remember { mutableStateOf(false) }
+    var streaming by remember { mutableStateOf(false) }
     val executor = remember { Executors.newSingleThreadExecutor() }
     DisposableEffect(Unit) { onDispose { executor.shutdown() } }
 
@@ -76,6 +77,13 @@ fun ScanScreen(onResult: (String) -> Unit, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     val previewView = PreviewView(ctx)
+                    // PreviewView attaches its surface only once the camera starts, and that
+                    // doesn't redraw the Compose host by itself, so the preview stayed black
+                    // until something else did. Flipping `streaming` recomposes the hint below,
+                    // which redraws the host and reveals the live preview.
+                    previewView.previewStreamState.observe(lifecycleOwner) { state ->
+                        streaming = state == PreviewView.StreamState.STREAMING
+                    }
                     val providerFuture = ProcessCameraProvider.getInstance(ctx)
                     providerFuture.addListener({
                         val provider = providerFuture.get()
@@ -114,7 +122,7 @@ fun ScanScreen(onResult: (String) -> Unit, onBack: () -> Unit) {
                     }
             }
             Text(
-                "Point at the pairing QR in Scout on your computer",
+                if (streaming) "Point at the pairing QR in Scout on your computer" else "Starting camera…",
                 color = Color.White,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
