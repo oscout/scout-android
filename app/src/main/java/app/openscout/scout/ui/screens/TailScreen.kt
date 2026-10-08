@@ -73,7 +73,7 @@ fun TailEvent.tailKind(): TailKind = when (kind) {
             "bash", "exec", "shell", "exec_command" -> TailKind.Shell
             "read", "grep", "glob", "ls", "webfetch", "websearch" -> TailKind.Read
             "task", "agent", "todowrite", "toolsearch", "skill", "update_plan", "view_image" -> TailKind.Tool
-            // Claude and Codex summarise a shell call as the bare command line.
+            // Claude and Codex summarize a shell call as the bare command line.
             else -> if (name.startsWith("mcp__") || name.contains("__")) TailKind.Tool else TailKind.Shell
         }
     }

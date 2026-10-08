@@ -268,24 +268,35 @@ private fun CardHead(title: String, trailing: @Composable () -> Unit = {}) {
     }
 }
 
-private data class QuotaLine(val harness: Harness, val name: String, val short: Int?, val long: Int?, val reset: String?, val soon: Boolean)
+private data class QuotaLine(
+    val harness: Harness,
+    val name: String,
+    val shortLabel: String?,
+    val short: Int?,
+    val longLabel: String?,
+    val long: Int?,
+    val reset: String?,
+    val soon: Boolean,
+)
 
+/** The bridge sends each provider's windows short-first (e.g. 5h, then wk); read them in that order. */
 private fun quotaLines(budgets: List<ServiceBudget>, now: Long): List<QuotaLine> = budgets
     .filter { it.windows.isNotEmpty() }
     .sortedWith(compareBy({ Harness.of(it.provider) == Harness.Other }, { -(it.windows.maxOfOrNull { w -> w.usedPercent } ?: 0.0) }))
     .take(3)
     .map { b ->
-        val short = b.windows.firstOrNull { it.label.contains("h", ignoreCase = true) && !it.label.contains("d", ignoreCase = true) }
-        val long = b.windows.firstOrNull { it.label.contains("d", ignoreCase = true) || it.label.contains("w", ignoreCase = true) }
-            ?: b.windows.firstOrNull { it !== short }
+        val short = b.windows.getOrNull(0)
+        val long = b.windows.getOrNull(1)
         val driving = listOfNotNull(short, long).maxByOrNull { it.usedPercent }
         val soon = driving?.resetAt?.let { it - now in 0..86_400_000L } ?: false
         QuotaLine(
             harness = Harness.of(b.provider),
             name = b.label.ifBlank { b.provider }.lowercase(),
+            shortLabel = short?.label,
             short = short?.usedPercent?.toInt(),
+            longLabel = long?.label,
             long = long?.usedPercent?.toInt(),
-            reset = driving?.reset,
+            reset = driving?.reset?.takeIf { it.isNotBlank() },
             soon = soon,
         )
     }
@@ -300,8 +311,8 @@ private fun UsageCard(budgets: List<ServiceBudget>, live: Int, moving30: Int) {
         Column {
             Row(Modifier.fillMaxWidth().height(30.dp).padding(start = 12.dp, end = 12.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("USAGE", style = ScoutType.label, color = c.ink, modifier = Modifier.width(quotaColumns[0]))
-                Text("5H", style = ScoutType.micro, color = c.dim, modifier = Modifier.width(quotaColumns[1]))
-                Text("7D", style = ScoutType.micro, color = c.dim, modifier = Modifier.width(quotaColumns[2]))
+                Text(lines.firstNotNullOfOrNull { it.shortLabel }?.uppercase().orEmpty(), style = ScoutType.micro, color = c.dim, modifier = Modifier.width(quotaColumns[1]))
+                Text(lines.firstNotNullOfOrNull { it.longLabel }?.uppercase().orEmpty(), style = ScoutType.micro, color = c.dim, modifier = Modifier.width(quotaColumns[2]))
                 Text("RESETS", style = ScoutType.micro, color = c.dim, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
             }
             if (lines.isEmpty()) {
@@ -356,7 +367,12 @@ private fun QuotaCell(percent: Int?, modifier: Modifier) {
     }
 }
 
-/** The week as 28 dot columns (6h each), up to five dots tall; the newest column in the accent. */
+private fun spanLabel(ms: Long): String {
+    val hours = ms / 3_600_000L
+    return if (hours >= 48) "${(hours + 12) / 24}d" else "${hours.coerceAtLeast(1)}h"
+}
+
+/** The heartrate window as up to 28 dot columns, up to five dots tall; the newest column in the accent. */
 @Composable
 private fun ActivityCard(heartrate: Heartrate?) {
     val c = Scout.colors
@@ -366,8 +382,14 @@ private fun ActivityCard(heartrate: Heartrate?) {
         buckets.chunked(per).takeLast(28).map { chunk -> ceil((chunk.maxOfOrNull { it.value } ?: 0.0) * 5).toInt().coerceIn(0, 5) }
     }
     val events = buckets.sumOf { it.count }
+    val window = heartrate?.windowLabel?.removePrefix("trailing")?.trim().orEmpty()
+    // Axis ticks from the buckets' own span, so a different window still labels true.
+    val ticks = remember(buckets) {
+        val span = buckets.firstOrNull()?.let { System.currentTimeMillis() - it.ts }?.takeIf { it > 0 }
+        if (span == null) emptyList() else listOf(1.0, 2.0 / 3, 1.0 / 3).map { spanLabel((span * it).toLong()) } + "now"
+    }
     Column(Modifier.fillMaxSize()) {
-        CardHead("Activity") { Text("%,d events · 7d".format(events), style = ScoutType.meta, color = c.dim) }
+        CardHead("Activity") { Text(if (window.isEmpty()) "%,d events".format(events) else "%,d events · %s".format(events, window), style = ScoutType.meta, color = c.dim) }
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             val last = columns.lastIndex
             columns.forEachIndexed { col, v ->
@@ -381,7 +403,7 @@ private fun ActivityCard(heartrate: Heartrate?) {
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("7d", "5d", "3d", "now").forEach { Text(it, style = ScoutType.micro, color = c.dim) }
+            ticks.forEach { Text(it, style = ScoutType.micro, color = c.dim) }
         }
     }
 }
@@ -418,7 +440,7 @@ private fun AskBox(item: InboxItem, busy: Boolean, error: String?, onOpen: () ->
                 Text(item.sessionName.ifBlank { item.adapterType }, style = ScoutType.mono11, color = c.second, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 if (item.risk != "low") Text("${item.risk} risk", style = ScoutType.micro, color = c.signal)
             }
-            Text(item.title.ifBlank { "Wants to run a command" }, style = ScoutType.name, color = c.ink, modifier = Modifier.padding(start = 12.dp, top = 6.dp))
+            Text(item.title.ifBlank { "Needs your approval" }, style = ScoutType.name, color = c.ink, modifier = Modifier.padding(start = 12.dp, top = 6.dp))
             val command = item.detail ?: item.description.takeIf { it.isNotBlank() && it != item.title }
             command?.let { CommandWell(it, Modifier.padding(start = 12.dp, top = 8.dp)) }
             if (error != null) Text(error, style = ScoutType.bodySmall, color = c.danger, modifier = Modifier.padding(start = 12.dp, top = 6.dp))

@@ -33,7 +33,7 @@ round II (`ios-home-dense.tsx`); the design canvas lives in the "Scout for
 Android" Claude Design artifact. A near-black ground lit from above with a
 little grain, 0.5dp low-alpha hairlines, boxes lit along their top edge, caps
 mono section labels on a long rule, harness marks, raised-plate selection
-(`ios-soft-selection.tsx`), and colour kept for state. Navigation is a drawer
+(`ios-soft-selection.tsx`), and color kept for state. Navigation is a drawer
 (Home, Chats, Agents, Ops, Alerts, hosts, Settings), not a tab bar. Dark is the
 default; Light and System are in Settings.
 

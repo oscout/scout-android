@@ -74,7 +74,7 @@ fun ScoutDrawer(
             .width(316.dp)
             .clip(shape)
             .drawBehind {
-                drawRect(Brush.verticalGradient(if (c.isDark) listOf(Color(0xFF101215), Color(0xFF0B0C0E)) else listOf(Color(0xFFF5F3EE), Color(0xFFEFEDE8))))
+                drawRect(Brush.verticalGradient(listOf(c.sheetTop, c.sheetBottom)))
                 drawRect(Brush.radialGradient(listOf(c.keyLight, Color.Transparent), Offset(size.width * 0.3f, -size.height * 0.04f), size.width * 1.4f))
                 drawLine(c.line, Offset(size.width, 0f), Offset(size.width, size.height), Hairline.toPx())
             }

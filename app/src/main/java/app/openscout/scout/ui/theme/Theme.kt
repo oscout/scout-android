@@ -2,7 +2,7 @@
 // (design/studio/views/ios-calmer-surfaces.tsx) and Home, denser round II
 // (ios-home-dense.tsx). A near-black ground lit from above with a little grain,
 // 0.5dp low-alpha hairlines, boxes lit along their top edge, caps mono labels on
-// a long rule, harness marks, and colour kept for state. Selection is a raised
+// a long rule, harness marks, and color kept for state. Selection is a raised
 // plate in dark (ios-soft-selection.tsx); light keeps ink selection.
 
 package app.openscout.scout.ui.theme
@@ -57,6 +57,8 @@ data class ScoutColors(
     val dotOn: Color,
     val popTop: Color,
     val popBottom: Color,
+    val sheetTop: Color,
+    val sheetBottom: Color,
     val kindEdit: Color,
     val kindShell: Color,
     val kindRead: Color,
@@ -90,6 +92,8 @@ val DarkScout = ScoutColors(
     dotOn = Color(0xFFC2C8CF),
     popTop = Color(0xFF17191D),
     popBottom = Color(0xFF121417),
+    sheetTop = Color(0xFF101215),
+    sheetBottom = Color(0xFF0B0C0E),
     kindEdit = Color(0xFFE0A458),
     kindShell = Color(0xFF7FA7D9),
     kindRead = Color(0xFF8E96A0),
@@ -123,6 +127,8 @@ val LightScout = ScoutColors(
     dotOn = Color(0xFF55524C),
     popTop = Color(0xFFFBFAF7),
     popBottom = Color(0xFFF5F3EE),
+    sheetTop = Color(0xFFF5F3EE),
+    sheetBottom = Color(0xFFEFEDE8),
     kindEdit = Color(0xFFA8661A),
     kindShell = Color(0xFF2F6FB8),
     kindRead = Color(0xFF6B737D),

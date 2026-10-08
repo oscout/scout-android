@@ -32,7 +32,8 @@ const inputs: Record<string, unknown> = {
 };
 const paths = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT_PATHS;
 
-const relay = process.env.RELAY ?? qr.relay.replace(/\/\/[^/:]+/, "//127.0.0.1");
+// RELAY overrides the advertised relay (e.g. ws://127.0.0.1:43131 when the LAN address is unreachable).
+const relay = process.env.RELAY ?? qr.relay;
 const ws = new WebSocket(`${relay}?room=${qr.room}&role=client`);
 const hs = new NoiseHandshake("XX", "initiator", generateKeyPair());
 let session: ReturnType<NoiseHandshake["finalize"]> | null = null;

@@ -309,7 +309,7 @@ data class BudgetWindow(
     val resetAt: Long? = null,
 )
 
-/** `mobile.heartrate`: fleet velocity over a trailing week, normalised 0..1 per bucket. */
+/** `mobile.heartrate`: fleet velocity over a trailing week, normalized 0..1 per bucket. */
 @Serializable
 data class Heartrate(
     val windowLabel: String = "",

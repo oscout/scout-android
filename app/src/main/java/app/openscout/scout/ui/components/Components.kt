@@ -74,7 +74,7 @@ private val grainTile: ImageBitmap by lazy {
     android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
 }
 
-/** The lit ground: page colour, light falling from the top edge, and a little grain. */
+/** The lit ground: page color, light falling from the top edge, and a little grain. */
 @Composable
 fun ScoutCanvas(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val c = Scout.colors
@@ -94,7 +94,7 @@ fun ScoutCanvas(modifier: Modifier = Modifier, content: @Composable BoxScope.() 
                 drawRect(grain, alpha = if (c.isDark) 0.07f else 0.05f, blendMode = if (c.isDark) BlendMode.Overlay else BlendMode.Multiply)
             },
     ) {
-        // The canvas is not a Surface, so set the content colour explicitly.
+        // The canvas is not a Surface, so set the content color explicitly.
         CompositionLocalProvider(LocalContentColor provides c.ink) { content() }
     }
 }
