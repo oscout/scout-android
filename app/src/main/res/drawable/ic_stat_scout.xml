@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-bar mark: the Scout hex as a ring with its lit core, monochrome as Android requires. -->
+<!-- Status-bar mark: the canonical Scout ring and core, monochrome as Android requires. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineJoin="round"
-        android:pathData="M12,2.5 L20.2,7.25 L20.2,16.75 L12,21.5 L3.8,16.75 L3.8,7.25 Z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M9.6,12 a2.4,2.4 0 1,0 4.8,0 a2.4,2.4 0 1,0 -4.8,0" />
+    <group
+        android:scaleX="0.0902"
+        android:scaleY="0.0902"
+        android:translateX="1.9"
+        android:translateY="1.36">
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="24"
+            android:strokeLineJoin="round"
+            android:pathData="M103.01,13.21 Q112,8 120.99,13.21 L198.01,57.79 Q207,63 207,73.39 L207,162.61 Q207,173 198.01,178.21 L120.99,222.79 Q112,228 103.01,222.79 L25.99,178.21 Q17,173 17,162.61 L17,73.39 Q17,63 25.99,57.79 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M112,70 L154,94 L154,142 L112,166 L70,142 L70,94 Z" />
+    </group>
 </vector>
