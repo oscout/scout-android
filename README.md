@@ -1,4 +1,27 @@
-## Scout for Android
+<p>
+  <a href="https://openscout.app">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/scout-lockup-light.svg" />
+      <img src="assets/scout-lockup-ink.svg" alt="Scout" height="28" />
+    </picture>
+  </a>
+</p>
+
+# Scout for Android
+
+Your agents in your pocket: see what's moving, chat with agents, and approve permission requests from your phone.
+
+[OpenScout](https://openscout.app) · [Build](#build-install-run) · [How it connects](#how-it-connects) · [All integrations](https://github.com/oscout)
+
+<!-- scout-illustration:start -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/scout-illustration-dark.svg" />
+    <img src="assets/scout-illustration-light.svg" alt="Scout reaches a paired Android phone through an encrypted relay, where a permission request arrives as a heads-up notification with Deny and Allow." width="100%" />
+  </picture>
+</p>
+<p align="center"><em>Your agents in your pocket: approve a permission request without leaving the notification.</em></p>
+<!-- scout-illustration:end -->
 
 The Android counterpart to Scout for iOS: a native mobile
 surface for the broker/runtime running on your computer. It pairs with the
@@ -27,7 +50,7 @@ tools and the interop test below use OpenScout's own Noise code, so they need an
 OpenScout checkout: set `OPENSCOUT_DIR` to it, or run them from inside the
 monorepo, where this app lives as `apps/android`.
 
-### What's in it
+## What's in it
 
 | Screen | What it shows | Bridge procedures |
 | --- | --- | --- |
@@ -61,7 +84,7 @@ default; Light and System are in Settings.
   `mobile.tail` in `assistant-replies` mode (Moving, built like iOS
   `HomeMovingSessions`), and `mobile.fleet` activity (Coordination).
 
-### Build, install, run
+## Build, install, run
 
 ```bash
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
@@ -75,7 +98,7 @@ Needs JDK 17+ (21 used here) and an Android SDK with `platforms;android-37.0`
 and `build-tools;37.0.0`. Point Gradle at the SDK with `ANDROID_HOME` or a
 `local.properties` containing `sdk.dir=...` (gitignored).
 
-### How it connects
+## How it connects
 
 ```
 phone ──ws──► pairing relay (:43131) ◄──ws── bridge (:43130) ──► broker (:43110)
@@ -108,7 +131,7 @@ phone ──ws──► pairing relay (:43131) ◄──ws── bridge (:43130)
 The phone's X25519 identity is sealed with an Android Keystore AES key; trusted
 bridges and relay routes are stored in private preferences.
 
-### Local development against this machine's broker (emulator)
+## Local development against this machine's broker (emulator)
 
 The emulator can't scan a QR off your monitor, so hand it the live pairing
 payload over adb instead:
@@ -137,7 +160,7 @@ real phone you can also just scan the QR from `scout pair` or the Mac app.
 To seed something to look at, `scout broadcast "hello"` and
 `scout notify --message "hi"` create a channel and an operator DM.
 
-### Dev tools
+## Dev tools
 
 - `tools/noise-responder.ts` drives the bridge's own Noise responder over
   stdin/stdout; `NoiseInteropTest` runs the phone's initiator against it (XX and
@@ -146,7 +169,7 @@ To seed something to look at, `scout broadcast "hello"` and
 - `bun tools/bridge-probe.ts [path …]` pairs with the local bridge
   as a throwaway phone and prints `mobile.*` replies, to check wire shapes.
 
-### Not done yet
+## Not done yet
 
 - Terminal (SSH shell into the device-scoped tmux workspace), voice, the
   World/Deck/Mesh scenes, and the Spaces web surface
