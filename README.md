@@ -1,6 +1,6 @@
 ## Scout for Android
 
-The Android counterpart to [Scout for iOS](../ios/README.md): a native mobile
+The Android counterpart to Scout for iOS: a native mobile
 surface for the broker/runtime running on your computer. It pairs with the
 computer's pairing bridge exactly like iOS does (same QR payload, same
 `scout://pair` link, same Noise handshake, same tRPC procedures) and holds no
@@ -11,6 +11,13 @@ broker logic of its own.
   the iOS bundle id
 - `compileSdk`/`targetSdk` 37, `minSdk` 28
 - Gradle Kotlin DSL, version catalog (`gradle/libs.versions.toml`), wrapper checked in
+
+Apache 2.0 (see `LICENSE`). The app builds on its own: `./gradlew assembleDebug`
+needs only the Android SDK. It talks to the pairing bridge from
+[OpenScout](https://openscout.app), which runs on your computer. The dev
+tools and the interop test below use OpenScout's own Noise code, so they need an
+OpenScout checkout: set `OPENSCOUT_DIR` to it, or run them from inside the
+monorepo, where this app lives as `apps/android`.
 
 ### What's in it
 
@@ -49,7 +56,6 @@ default; Light and System are in Settings.
 ### Build, install, run
 
 ```bash
-cd apps/android
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest      # Noise (incl. interop with the bridge's TS responder) + pairing payload tests
 ./gradlew lintDebug
@@ -100,11 +106,12 @@ The emulator can't scan a QR off your monitor, so hand it the live pairing
 payload over adb instead:
 
 ```bash
-# from the repo root, once: bun install
+# in an OpenScout checkout, once: bun install
 bun packages/runtime/src/broker-daemon.ts &              # broker on :43110 (skip if already running)
 bun packages/web/server/pairing-runtime-controller.ts &  # relay :43131 + bridge :43130, writes ~/.scout/pairing/runtime.json
 
-cd apps/android && ./gradlew installDebug
+# then, in this app's directory
+./gradlew installDebug
 scripts/pair-emulator.sh            # opens scout://pair?payload=… in the app
 ```
 
@@ -126,8 +133,9 @@ To seed something to look at, `scout broadcast "hello"` and
 
 - `tools/noise-responder.ts` drives the bridge's own Noise responder over
   stdin/stdout; `NoiseInteropTest` runs the phone's initiator against it (XX and
-  IK). Needs `bun install` at the repo root, otherwise the test is skipped.
-- `bun apps/android/tools/bridge-probe.ts [path …]` pairs with the local bridge
+  IK). Needs bun and an installed OpenScout checkout (`OPENSCOUT_DIR`, or the
+  enclosing monorepo), otherwise the test is skipped.
+- `bun tools/bridge-probe.ts [path …]` pairs with the local bridge
   as a throwaway phone and prints `mobile.*` replies, to check wire shapes.
 
 ### Not done yet

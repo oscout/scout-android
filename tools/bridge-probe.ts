@@ -1,6 +1,6 @@
 // Pair with the local bridge as a throwaway phone and print what the Android app reads.
 //
-//   bun apps/android/tools/bridge-probe.ts [path ...]
+//   bun tools/bridge-probe.ts [path ...]        (OPENSCOUT_DIR=<openscout checkout> outside the monorepo)
 //
 // Reads the live pairing code from ~/.scout/pairing/runtime.json, joins its relay room
 // as role=client, runs Noise XX as the initiator, then issues tRPC queries. Each reply
@@ -9,7 +9,10 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { generateKeyPair, NoiseHandshake } from "../../../packages/runtime/src/pairing-security/noise.ts";
+
+// The bridge's own Noise code: OPENSCOUT_DIR, or the monorepo this app lives in.
+const root = process.env.OPENSCOUT_DIR ?? join(import.meta.dir, "../../..");
+const { generateKeyPair, NoiseHandshake } = await import(join(root, "packages/runtime/src/pairing-security/noise.ts"));
 
 const DEFAULT_PATHS = [
   "mobile.serviceBudgets",

@@ -16,7 +16,8 @@ import org.junit.Test
  * The phone's initiator against the bridge's own responder
  * (packages/runtime/src/pairing-security/noise.ts) through tools/noise-responder.ts.
  * Catches what Kotlin-to-Kotlin tests can't: a drift in nonce layout, HKDF, or
- * pattern tokens on either side. Skipped when bun or the repo's node_modules are absent.
+ * pattern tokens on either side. Needs bun and an installed openscout checkout: OPENSCOUT_DIR,
+ * or the monorepo this app lives in. Skipped when either is missing.
  */
 class NoiseInteropTest {
     @Test
@@ -24,11 +25,14 @@ class NoiseInteropTest {
         val bun = (listOf(System.getenv("HOME") + "/.bun/bin/bun") + System.getenv("PATH").orEmpty().split(File.pathSeparator).map { "$it/bun" })
             .firstOrNull { File(it).canExecute() }
         val script = generateSequence(File("").absoluteFile) { it.parentFile }.map { File(it, "tools/noise-responder.ts") }.firstOrNull { it.exists() }
-        val deps = script?.let { File(it.parentFile, "../../../packages/runtime/node_modules/@noble/ciphers").canonicalFile.exists() } == true
-        assumeTrue("bun, tools/noise-responder.ts and a `bun install` are required", bun != null && deps)
+        val root = System.getenv("OPENSCOUT_DIR")?.let(::File) ?: script?.let { File(it.parentFile, "../../..") }
+        val deps = root?.let { File(it, "packages/runtime/node_modules/@noble/ciphers").canonicalFile.exists() } == true
+        assumeTrue("bun and an installed openscout checkout (OPENSCOUT_DIR) are required", bun != null && deps)
 
         for (pattern in HandshakePattern.entries) {
-            val proc = ProcessBuilder(bun!!, "run", script!!.path).start()
+            val proc = ProcessBuilder(bun!!, "run", script!!.path)
+                .apply { environment()["OPENSCOUT_DIR"] = root!!.canonicalPath }
+                .start()
             val out = proc.inputStream.bufferedReader()
             val inp = proc.outputStream.bufferedWriter()
             fun send(line: String) { inp.write(line); inp.newLine(); inp.flush() }

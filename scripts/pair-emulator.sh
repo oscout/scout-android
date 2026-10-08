@@ -8,9 +8,9 @@
 # emulator it tries the 10.0.2.2 host alias first.
 #
 # Usage:
-#   apps/android/scripts/pair-emulator.sh            # emulator / first adb device
-#   apps/android/scripts/pair-emulator.sh --reverse  # USB device: adb reverse the relay port
-#   ANDROID_SERIAL=emulator-5554 apps/android/scripts/pair-emulator.sh
+#   scripts/pair-emulator.sh            # emulator / first adb device
+#   scripts/pair-emulator.sh --reverse  # USB device: adb reverse the relay port
+#   ANDROID_SERIAL=emulator-5554 scripts/pair-emulator.sh
 #
 # Env: SCOUT_ANDROID_PACKAGE (default app.openscout.scout.debug),
 #      SCOUT_PAIRING_SNAPSHOT (default ~/.scout/pairing/runtime.json).
@@ -39,7 +39,7 @@ command -v bun >/dev/null 2>&1 || { echo "bun is required (repo toolchain)" >&2;
 if [ ! -f "$SNAPSHOT" ]; then
   cat >&2 <<EOF
 No pairing snapshot at $SNAPSHOT.
-Start the pairing runtime first, e.g. from the repo root:
+Start the pairing runtime first, e.g. from an OpenScout checkout:
   bun packages/runtime/bin/openscout-runtime.mjs broker &      # broker (if not already running)
   bun packages/web/server/pairing-runtime-controller.ts &      # pairing relay + bridge
 EOF
