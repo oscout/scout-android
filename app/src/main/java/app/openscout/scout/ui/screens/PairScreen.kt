@@ -158,7 +158,7 @@ fun PairScreen(
                 Eyebrow("Running in the emulator")
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "The emulator can't scan a QR off your screen. From the repo on the host, run:",
+                    "The emulator can't scan a QR off your screen. From the Scout for Android checkout on the host, run:",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -169,7 +169,7 @@ fun PairScreen(
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Text(
-                        "apps/android/scripts/pair-emulator.sh",
+                        "scripts/pair-emulator.sh",
                         fontFamily = Mono,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(12.dp).fillMaxWidth(),
