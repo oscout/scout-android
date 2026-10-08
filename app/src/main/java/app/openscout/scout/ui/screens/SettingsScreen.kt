@@ -1,6 +1,9 @@
 package app.openscout.scout.ui.screens
 
+import android.Manifest
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,12 +45,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.openscout.scout.BuildConfig
 import app.openscout.scout.core.bridge.LinkState
 import app.openscout.scout.core.bridge.LogLine
 import app.openscout.scout.core.identity.TrustedBridge
+import app.openscout.scout.core.notify.ApprovalNotifier
 import app.openscout.scout.ui.AppViewModel
 import app.openscout.scout.ui.components.MonoText
 import app.openscout.scout.ui.components.ScoutTopBar
@@ -69,6 +74,13 @@ fun SettingsScreen(vm: AppViewModel, onBack: () -> Unit, onPairAnother: () -> Un
     val log by vm.connectionLog.collectAsStateWithLifecycle()
     val themeMode by vm.settings.themeMode.collectAsStateWithLifecycle()
     val wallpaper by vm.settings.wallpaperColor.collectAsStateWithLifecycle()
+    val watchApprovals by vm.settings.watchApprovals.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var notificationsBlocked by remember { mutableStateOf(false) }
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        notificationsBlocked = !granted
+        vm.setWatchApprovals(granted)
+    }
     var forgetting by remember { mutableStateOf<TrustedBridge?>(null) }
     var renaming by remember { mutableStateOf<TrustedBridge?>(null) }
     var showLog by remember { mutableStateOf(false) }
@@ -160,10 +172,37 @@ fun SettingsScreen(vm: AppViewModel, onBack: () -> Unit, onPairAnother: () -> Un
                 }
             }
 
+            item { SectionHeader("Notifications") }
+            item {
+                ListItem(
+                    colors = itemColors,
+                    headlineContent = { Text("Permission requests") },
+                    supportingContent = {
+                        Text(
+                            if (notificationsBlocked) "Notifications are off for Scout in Android settings."
+                            else "Keep the link open in the background and notify you, with Allow and Deny, when an agent asks.",
+                        )
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = watchApprovals,
+                            onCheckedChange = { on ->
+                                if (on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ApprovalNotifier.canPost(context)) {
+                                    askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    notificationsBlocked = false
+                                    vm.setWatchApprovals(on)
+                                }
+                            },
+                        )
+                    },
+                )
+            }
+
             item { SectionHeader("Not on Android yet") }
             item {
                 Text(
-                    "Terminal (SSH shell), voice, push notifications, widgets and the Spaces web surface are iOS-only for now.",
+                    "Terminal (SSH shell), voice, widgets and the Spaces web surface are iOS-only for now.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp),

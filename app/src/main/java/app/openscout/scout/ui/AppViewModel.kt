@@ -21,6 +21,7 @@ import app.openscout.scout.core.model.ServiceBudgets
 import app.openscout.scout.core.model.InboxItem
 import app.openscout.scout.core.model.MobileHome
 import app.openscout.scout.core.model.TailEvent
+import app.openscout.scout.core.notify.ApprovalWatchService
 import app.openscout.scout.core.pairing.QRPayload
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -137,6 +138,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         viewModelScope.launch {
+            // Requests answered here or elsewhere drop out of the inbox; take their notifications down.
+            _inbox.collect { inbox -> inbox.data?.let { items -> app.notifier.reconcile(items.mapTo(HashSet()) { it.id }) } }
+        }
+        viewModelScope.launch {
             connection.events.collect { event ->
                 when (event) {
                     is BridgeEvent.ConversationChanged -> onConversationChanged(event.conversationId)
@@ -157,6 +162,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onForeground() {
         foreground = true
+        if (isPaired && settings.watchApprovals.value) ApprovalWatchService.start(app)
         if (isPaired && !connection.isConnected) scheduleReconnect(immediate = true)
         else if (connection.isConnected) refreshAll()
     }
@@ -164,9 +170,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun onBackground() {
         foreground = false
         reconnectJob?.cancel()
-        // Like iOS, drop the socket while backgrounded; the relay and bridge
-        // keep running on the computer, and we reconnect on return.
-        connection.disconnect()
+        // With background approvals on, ApprovalWatchService holds the link open.
+        // Otherwise, like iOS, drop the socket while backgrounded; the relay and
+        // bridge keep running on the computer, and we reconnect on return.
+        if (!(isPaired && settings.watchApprovals.value)) connection.disconnect()
+    }
+
+    /** Settings toggle: hold the link open in the background and notify on permission requests. */
+    fun setWatchApprovals(enabled: Boolean) {
+        settings.setWatchApprovals(enabled)
+        if (enabled && isPaired) ApprovalWatchService.start(app) else ApprovalWatchService.stop(app)
     }
 
     fun retryNow() = scheduleReconnect(immediate = true)
@@ -238,7 +251,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (wasActive) {
             connection.disconnect()
             clearData()
-            if (isPaired) scheduleReconnect(immediate = true)
+            if (isPaired) scheduleReconnect(immediate = true) else ApprovalWatchService.stop(app)
         }
     }
 

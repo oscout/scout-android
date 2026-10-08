@@ -6,6 +6,10 @@
     <!-- Only used to read the pairing QR. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Permission requests as notifications, with the link held open by an opt-in foreground service. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!--
       Relays on a LAN or tailnet are plain ws:// endpoints; every payload on
@@ -46,5 +50,18 @@
                 <data android:scheme="https" android:host="openscout.app" android:pathPrefix="/pair" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".core.notify.ApprovalWatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Holds the user-enabled, end-to-end encrypted link to their own paired computer so agent permission requests arrive as notifications. There is no push service for this link." />
+        </service>
+
+        <receiver
+            android:name=".core.notify.ApprovalActionReceiver"
+            android:exported="false" />
     </application>
 </manifest>

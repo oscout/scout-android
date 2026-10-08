@@ -76,10 +76,20 @@ phone ──ws──► pairing relay (:43131) ◄──ws── bridge (:43130)
 2. **Reconnect.** On launch/foreground the app asks the relay for the bridge's
    current room (`POST /resolve`), then runs Noise IK against the saved key.
    Routes are tried in order, and the one that wins is promoted. It backs off
-   1s → 30s while unreachable, and drops the socket when backgrounded.
+   1s → 30s while unreachable, and drops the socket when backgrounded, unless
+   background permission requests are on (below).
 3. **Talk.** Every call is a tRPC envelope (`{id, jsonrpc, method, params:{path,input}}`)
    encrypted on the channel. Pushed `mobile:conversation:changed` and
    `operator:notify` frames refresh chats and alerts live.
+
+4. **Permission requests in the background.** Opt-in from Settings →
+   Notifications. `ApprovalWatchService` (a `specialUse` foreground service)
+   holds the link open while the app is out of sight, and `ApprovalNotifier`
+   turns each `operator:notify` into a notification. Approvals get Allow and
+   Deny actions that call `actionDecide` through `ApprovalActionReceiver`
+   without opening the app. After a dropped link it catches up from
+   `mobile.inbox`, and requests answered elsewhere are taken down. There is no
+   FCM path, so with the setting off nothing arrives in the background.
 
 The phone's X25519 identity is sealed with an Android Keystore AES key; trusted
 bridges and relay routes are stored in private preferences.
@@ -124,8 +134,8 @@ To seed something to look at, `scout broadcast "hello"` and
 
 - Terminal (SSH shell into the device-scoped tmux workspace), voice, the
   World/Deck/Mesh scenes, and the Spaces web surface
-- Push notifications (the Push Relay is APNs-only today), widgets, and the
-  notification service extension
+- Real push (the Push Relay is APNs-only today; background requests need the
+  opt-in held link above), and widgets
 - LAN pair-request discovery (Bonjour/beacon "Choose a Mac") and OpenScout
   Network rendezvous. Pairing is QR, link, or deep link only.
 - Rich session transcripts (`mobile.sessionSnapshot` turns/blocks, tool calls,

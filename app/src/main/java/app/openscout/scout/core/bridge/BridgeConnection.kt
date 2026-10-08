@@ -92,7 +92,8 @@ enum class RouteKind(val label: String) {
 sealed interface BridgeEvent {
     data class ConversationChanged(val conversationId: String, val messageId: String?) : BridgeEvent
     data class ConversationLifecycle(val conversationId: String, val state: String?, val summary: String?) : BridgeEvent
-    data class OperatorNotify(val tier: String?, val title: String?) : BridgeEvent
+    /** An agent needs the operator; [item] is the `mobile.inbox` row the bridge attached. */
+    data class OperatorNotify(val tier: String?, val title: String?, val item: JsonObject? = null) : BridgeEvent
     data object SessionActivity : BridgeEvent
 }
 
@@ -354,7 +355,7 @@ class BridgeConnection(
                 BridgeEvent.ConversationLifecycle(obj.str("conversationId") ?: return, obj.str("lifecycleState"), obj.str("summary")),
             )
             "operator:notify" -> _events.tryEmit(
-                BridgeEvent.OperatorNotify(obj.str("tier"), (obj["item"] as? JsonObject)?.str("title")),
+                BridgeEvent.OperatorNotify(obj.str("tier"), (obj["item"] as? JsonObject)?.str("title"), obj["item"] as? JsonObject),
             )
             else -> if (obj.containsKey("seq")) _events.tryEmit(BridgeEvent.SessionActivity)
         }
