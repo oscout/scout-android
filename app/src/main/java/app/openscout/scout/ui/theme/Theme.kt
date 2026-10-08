@@ -1,8 +1,9 @@
-// Scout for Android — the Material dialect of the Lit Control Room
-// (apps/ios/DESIGN.md, root DESIGN.md). Warm paper by day, a lit warm cockpit
-// after dark, one emerald accent, a status triad, and uppercase mono eyebrows
-// as the structural label voice. Material You (wallpaper) color is offered as
-// an opt-in alternative on Android 12+.
+// Scout for Android in the iPhone's current voice: "D · web voice"
+// (design/studio/views/ios-calmer-surfaces.tsx) and Home, denser round II
+// (ios-home-dense.tsx). A near-black ground lit from above with a little grain,
+// 0.5dp low-alpha hairlines, boxes lit along their top edge, caps mono labels on
+// a long rule, harness marks, and colour kept for state. Selection is a raised
+// plate in dark (ios-soft-selection.tsx); light keeps ink selection.
 
 package app.openscout.scout.ui.theme
 
@@ -16,6 +17,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -28,98 +30,149 @@ import androidx.compose.ui.unit.sp
 
 enum class ThemeMode { System, Light, Dark }
 
-// -- Scout palette (iOS DESIGN.md values) ------------------------------------
-
-private val LightCanvas = Color(0xFFF6F3ED)
-private val LightSurface = Color(0xFFFFFDF9)
-private val LightChrome = Color(0xFFF2EEE6)
-private val LightInk = Color(0xFF23211D)
-private val LightMuted = Color(0xFF58534B)
-private val LightBorder = Color(0xFFCDC5B8)
-private val LightAccent = Color(0xFF07785B)
-
-private val DarkCanvasTop = Color(0xFF100E0B)
-private val DarkCanvasFloor = Color(0xFF060504)
-private val DarkCardTop = Color(0xFF211C18)
-private val DarkCardBottom = Color(0xFF171411)
-private val DarkEdge = Color(0xFF433A30)
-private val DarkInset = Color(0xFF161310)
-private val DarkRaised = Color(0xFF1C1915)
-private val DarkInk = Color(0xFFEEEAE2)
-private val DarkMuted = Color(0xFFB8B8B8)
-private val DarkAccent = Color(0xFF2FCB94)
-
-val AccentTail = Color(0xFF0BC5A5)
-
-private val ScoutLight = lightColorScheme(
-    primary = LightAccent,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD5EDE3),
-    onPrimaryContainer = Color(0xFF00382A),
-    secondary = Color(0xFF5E5A52),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE9E3D8),
-    onSecondaryContainer = LightInk,
-    tertiary = Color(0xFF2F6C8F),
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD9E9F4),
-    onTertiaryContainer = Color(0xFF0B2E44),
-    background = LightCanvas,
-    onBackground = LightInk,
-    surface = LightCanvas,
-    onSurface = LightInk,
-    surfaceVariant = Color(0xFFEAE4DA),
-    onSurfaceVariant = LightMuted,
-    surfaceContainerLowest = LightSurface,
-    surfaceContainerLow = LightSurface,
-    surfaceContainer = LightChrome,
-    surfaceContainerHigh = Color(0xFFEDE8DF),
-    surfaceContainerHighest = Color(0xFFE6E0D5),
-    surfaceBright = LightSurface,
-    surfaceDim = Color(0xFFE3DDD2),
-    outline = LightBorder,
-    outlineVariant = Color(0xFFE0D9CD),
-    error = Color(0xFFB3412E),
-    onError = Color.White,
-    errorContainer = Color(0xFFF8DCD5),
-    onErrorContainer = Color(0xFF4A1309),
+/** The D voice, resolved per appearance. */
+@Immutable
+data class ScoutColors(
+    val page: Color,
+    val ink: Color,
+    val body: Color,
+    val second: Color,
+    val dim: Color,
+    /** Edges of boxes, chips and segments. */
+    val line: Color,
+    /** Row separators and the rule that trails a section label. */
+    val rule: Color,
+    val life: Color,
+    val signal: Color,
+    val danger: Color,
+    val info: Color,
+    val keyLight: Color,
+    val boxTop: Color,
+    val boxEdgeHighlight: Color,
+    val plateTop: Color,
+    val plateBottom: Color,
+    val plateText: Color,
+    val well: Color,
+    val dotOff: Color,
+    val dotOn: Color,
+    val popTop: Color,
+    val popBottom: Color,
+    val kindEdit: Color,
+    val kindShell: Color,
+    val kindRead: Color,
+    val kindTool: Color,
+    val kindOut: Color,
+    val kindSay: Color,
+    val kindYou: Color,
+    val isDark: Boolean,
 )
 
-private val ScoutDark = darkColorScheme(
-    primary = DarkAccent,
-    onPrimary = Color(0xFF00281C),
-    primaryContainer = Color(0xFF123A2D),
-    onPrimaryContainer = Color(0xFFB9F2DB),
-    secondary = Color(0xFFCBC4B8),
-    onSecondary = Color(0xFF2B2722),
-    secondaryContainer = DarkRaised,
-    onSecondaryContainer = DarkInk,
-    tertiary = Color(0xFF7CC4F2),
-    onTertiary = Color(0xFF07263A),
-    tertiaryContainer = Color(0xFF15303F),
-    onTertiaryContainer = Color(0xFFD3ECFB),
-    background = DarkCanvasTop,
-    onBackground = DarkInk,
-    surface = DarkCanvasTop,
-    onSurface = DarkInk,
-    surfaceVariant = DarkRaised,
-    onSurfaceVariant = DarkMuted,
-    surfaceContainerLowest = DarkCanvasFloor,
-    surfaceContainerLow = DarkCardBottom,
-    surfaceContainer = DarkCardBottom,
-    surfaceContainerHigh = DarkCardTop,
-    surfaceContainerHighest = Color(0xFF2A241F),
-    surfaceBright = Color(0xFF2E2822),
-    surfaceDim = DarkCanvasFloor,
-    outline = DarkEdge,
-    outlineVariant = Color(0xFF2E2822),
-    error = Color(0xFFF2725B),
-    onError = Color(0xFF3A0A02),
-    errorContainer = Color(0xFF4A1A10),
-    onErrorContainer = Color(0xFFFFDAD2),
+val DarkScout = ScoutColors(
+    page = Color(0xFF08090A),
+    ink = Color(0xFFECEEF1),
+    body = Color(0xFFD2D6DC),
+    second = Color(0xFF9AA0A9),
+    dim = Color(0xFF737A84),
+    line = Color.White.copy(alpha = 0.085f),
+    rule = Color.White.copy(alpha = 0.055f),
+    life = Color(0xFF3FD29B),
+    signal = Color(0xFFE8955A),
+    danger = Color(0xFFF2725B),
+    info = Color(0xFF7CC4F2),
+    keyLight = Color(0xFFA0AFC8).copy(alpha = 0.075f),
+    boxTop = Color.White.copy(alpha = 0.028f),
+    boxEdgeHighlight = Color.White.copy(alpha = 0.07f),
+    plateTop = Color(0xFF33363D),
+    plateBottom = Color(0xFF282B31),
+    plateText = Color(0xFFECEEF1),
+    well = Color.Black.copy(alpha = 0.35f),
+    dotOff = Color.White.copy(alpha = 0.09f),
+    dotOn = Color(0xFFC2C8CF),
+    popTop = Color(0xFF17191D),
+    popBottom = Color(0xFF121417),
+    kindEdit = Color(0xFFE0A458),
+    kindShell = Color(0xFF7FA7D9),
+    kindRead = Color(0xFF8E96A0),
+    kindTool = Color(0xFFB596DB),
+    kindOut = Color(0xFF5F6670),
+    kindSay = Color(0xFFD2D6DC),
+    kindYou = Color(0xFFECEEF1),
+    isDark = true,
 )
 
-/** Status triad + structural tokens that Material's scheme doesn't name. */
+val LightScout = ScoutColors(
+    page = Color(0xFFEFEDE8),
+    ink = Color(0xFF141413),
+    body = Color(0xFF2C2B28),
+    second = Color(0xFF55524C),
+    dim = Color(0xFF6E6A63),
+    line = Color(0xFF141413).copy(alpha = 0.11f),
+    rule = Color(0xFF141413).copy(alpha = 0.075f),
+    life = Color(0xFF0B8F62),
+    signal = Color(0xFFC2410C),
+    danger = Color(0xFFB23422),
+    info = Color(0xFF2F6C8F),
+    keyLight = Color.White.copy(alpha = 0.7f),
+    boxTop = Color(0xFFFBFAF7),
+    boxEdgeHighlight = Color.White,
+    plateTop = Color(0xFF141413),
+    plateBottom = Color(0xFF141413),
+    plateText = Color(0xFFFBFAF7),
+    well = Color(0xFFE7E4DE),
+    dotOff = Color(0xFF141413).copy(alpha = 0.10f),
+    dotOn = Color(0xFF55524C),
+    popTop = Color(0xFFFBFAF7),
+    popBottom = Color(0xFFF5F3EE),
+    kindEdit = Color(0xFFA8661A),
+    kindShell = Color(0xFF2F6FB8),
+    kindRead = Color(0xFF6B737D),
+    kindTool = Color(0xFF7E4FB8),
+    kindOut = Color(0xFF9AA0A8),
+    kindSay = Color(0xFF2E3238),
+    kindYou = Color(0xFF0E1012),
+    isDark = false,
+)
+
+/** Material's scheme, resolved onto the D tokens so stock components sit in the same room. */
+private fun scheme(c: ScoutColors): ColorScheme {
+    val raised = if (c.isDark) Color(0xFF15171A) else Color(0xFFF7F5F1)
+    val high = if (c.isDark) Color(0xFF1C1F23) else Color(0xFFE9E6E0)
+    val base = if (c.isDark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = c.life,
+        onPrimary = c.page,
+        primaryContainer = c.plateTop,
+        onPrimaryContainer = c.plateText,
+        secondary = c.second,
+        onSecondary = c.page,
+        secondaryContainer = high,
+        onSecondaryContainer = c.ink,
+        tertiary = c.info,
+        onTertiary = c.page,
+        background = c.page,
+        onBackground = c.ink,
+        surface = c.page,
+        onSurface = c.ink,
+        surfaceVariant = raised,
+        onSurfaceVariant = c.second,
+        surfaceContainerLowest = c.page,
+        surfaceContainerLow = raised,
+        surfaceContainer = raised,
+        surfaceContainerHigh = high,
+        surfaceContainerHighest = high,
+        surfaceBright = high,
+        surfaceDim = c.page,
+        inverseSurface = c.ink,
+        inverseOnSurface = c.page,
+        outline = c.line.copy(alpha = c.line.alpha * 2.2f),
+        outlineVariant = c.line,
+        error = c.danger,
+        onError = c.page,
+        scrim = Color.Black,
+    )
+}
+
+/** Status + structural tokens kept for the screens written against the first pass. */
 @Immutable
 data class ScoutTokens(
     val ok: Color,
@@ -135,73 +188,77 @@ data class ScoutTokens(
     val isDark: Boolean,
 )
 
-private val LightTokens = ScoutTokens(
-    ok = Color(0xFF07785B),
-    warn = Color(0xFF9A6200),
-    danger = Color(0xFFB3412E),
-    info = Color(0xFF2F6C8F),
-    inset = Color(0xFFEFEAE1),
-    raised = LightSurface,
-    edge = LightBorder,
-    canvasTop = LightCanvas,
-    canvasFloor = Color(0xFFF0ECE4),
-    keyLight = Color(0x00FFFFFF),
-    isDark = false,
+private fun tokens(c: ScoutColors) = ScoutTokens(
+    ok = c.life,
+    warn = c.signal,
+    danger = c.danger,
+    info = c.info,
+    inset = c.well,
+    raised = c.boxTop,
+    edge = c.line,
+    canvasTop = c.page,
+    canvasFloor = c.page,
+    keyLight = c.keyLight,
+    isDark = c.isDark,
 )
 
-private val DarkTokens = ScoutTokens(
-    ok = DarkAccent,
-    warn = Color(0xFFF2B34D),
-    danger = Color(0xFFF2725B),
-    info = Color(0xFF7CC4F2),
-    inset = DarkInset,
-    raised = DarkRaised,
-    edge = DarkEdge,
-    canvasTop = DarkCanvasTop,
-    canvasFloor = DarkCanvasFloor,
-    keyLight = Color(0xFFFFF0DB),
-    isDark = true,
-)
-
-val LocalScoutTokens = staticCompositionLocalOf { LightTokens }
+val LocalScoutTokens = staticCompositionLocalOf { tokens(DarkScout) }
+val LocalScoutColors = staticCompositionLocalOf { DarkScout }
 
 object Scout {
     val tokens: ScoutTokens @Composable get() = LocalScoutTokens.current
+    val colors: ScoutColors @Composable get() = LocalScoutColors.current
 }
 
-// -- Type: grotesque for content, mono for structure ---------------------------
+val AccentTail = Color(0xFF0BC5A5)
+
+// -- Type: sans names, mono times/kinds/paths/labels ----------------------------
 
 val Mono = FontFamily.Monospace
+
+object ScoutType {
+    private val sans = FontFamily.SansSerif
+
+    /** Caps section label: mono 10.5, semibold, 0.1em, followed by a long hairline. Uppercase at the call site. */
+    val label = TextStyle(fontFamily = Mono, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.1.em)
+    val meta = TextStyle(fontFamily = Mono, fontSize = 10.5.sp)
+    val small = TextStyle(fontFamily = Mono, fontSize = 10.sp)
+    val micro = TextStyle(fontFamily = Mono, fontSize = 9.5.sp, letterSpacing = 0.04.em)
+    val mono11 = TextStyle(fontFamily = Mono, fontSize = 11.sp)
+    val mono12 = TextStyle(fontFamily = Mono, fontSize = 11.5.sp, lineHeight = 17.sp)
+    val title = TextStyle(fontFamily = sans, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+    val name = TextStyle(fontFamily = sans, fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+    val nameSmall = TextStyle(fontFamily = sans, fontSize = 12.5.sp, fontWeight = FontWeight.Medium)
+    val body = TextStyle(fontFamily = sans, fontSize = 13.5.sp, lineHeight = 18.sp)
+    val bodySmall = TextStyle(fontFamily = sans, fontSize = 13.sp, lineHeight = 17.sp)
+    val prose = TextStyle(fontFamily = sans, fontSize = 14.sp, lineHeight = 21.sp)
+}
 
 private val BaseType = Typography()
 
 private val ScoutTypography = Typography(
     displaySmall = BaseType.displaySmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp),
     headlineMedium = BaseType.headlineMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.25).sp),
-    headlineSmall = BaseType.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
-    titleLarge = BaseType.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-    titleMedium = BaseType.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-    titleSmall = BaseType.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-    bodyLarge = BaseType.bodyLarge.copy(lineHeight = 24.sp),
-    bodyMedium = BaseType.bodyMedium.copy(lineHeight = 20.sp),
+    headlineSmall = BaseType.headlineSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
+    titleLarge = BaseType.titleLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+    titleMedium = BaseType.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
+    titleSmall = BaseType.titleSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp),
+    bodyLarge = BaseType.bodyLarge.copy(fontSize = 14.sp, lineHeight = 21.sp),
+    bodyMedium = BaseType.bodyMedium.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
+    bodySmall = BaseType.bodySmall.copy(fontSize = 12.5.sp, lineHeight = 16.sp),
+    labelLarge = BaseType.labelLarge.copy(fontSize = 13.5.sp),
     labelSmall = BaseType.labelSmall.copy(fontSize = 11.sp),
 )
 
-/** Uppercase mono eyebrow — the system's signature label voice. Uppercase the text at the call site. */
-val EyebrowStyle = TextStyle(
-    fontFamily = Mono,
-    fontWeight = FontWeight.SemiBold,
-    fontSize = 11.sp,
-    letterSpacing = 0.12.em,
-    lineHeight = 14.sp,
-)
+/** Uppercase mono eyebrow. Uppercase the text at the call site. */
+val EyebrowStyle = ScoutType.label
 
 /** Mono detail: ids, paths, counts, timing. */
-val MonoDetailStyle = TextStyle(fontFamily = Mono, fontSize = 12.sp, lineHeight = 17.sp)
+val MonoDetailStyle = ScoutType.mono12
 
 @Composable
 fun ScoutTheme(
-    mode: ThemeMode = ThemeMode.System,
+    mode: ThemeMode = ThemeMode.Dark,
     wallpaperColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
@@ -210,26 +267,14 @@ fun ScoutTheme(
         ThemeMode.Light -> false
         ThemeMode.Dark -> true
     }
+    val colors = if (dark) DarkScout else LightScout
     val context = LocalContext.current
-    val scheme: ColorScheme = when {
-        wallpaperColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        dark -> ScoutDark
-        else -> ScoutLight
-    }
-    val base = if (dark) DarkTokens else LightTokens
-    val tokens = if (wallpaperColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        base.copy(
-            ok = scheme.primary,
-            inset = scheme.surfaceContainerHighest,
-            raised = scheme.surfaceContainerHigh,
-            edge = scheme.outlineVariant,
-            canvasTop = scheme.surface,
-            canvasFloor = scheme.surfaceContainerLowest,
-        )
-    } else base
-
-    androidx.compose.runtime.CompositionLocalProvider(LocalScoutTokens provides tokens) {
-        MaterialTheme(colorScheme = scheme, typography = ScoutTypography, content = content)
+    val materialScheme = if (wallpaperColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // Opt-in: the wallpaper tints Material's accents; the D ground and hairlines stay.
+        val wall = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        scheme(colors).copy(primary = wall.primary, onPrimary = wall.onPrimary)
+    } else scheme(colors)
+    CompositionLocalProvider(LocalScoutColors provides colors, LocalScoutTokens provides tokens(colors)) {
+        MaterialTheme(colorScheme = materialScheme, typography = ScoutTypography, content = content)
     }
 }

@@ -42,7 +42,7 @@ class SettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences("scout.settings", Context.MODE_PRIVATE)
 
     private val _themeMode = MutableStateFlow(
-        runCatching { ThemeMode.valueOf(prefs.getString("themeMode", null) ?: "System") }.getOrDefault(ThemeMode.System),
+        runCatching { ThemeMode.valueOf(prefs.getString("themeMode", null) ?: "Dark") }.getOrDefault(ThemeMode.Dark),
     )
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 

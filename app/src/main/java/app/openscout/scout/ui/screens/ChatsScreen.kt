@@ -1,5 +1,14 @@
 package app.openscout.scout.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
+import app.openscout.scout.ui.components.LitBox
+import app.openscout.scout.ui.components.RowRule
+import app.openscout.scout.ui.components.SectionHead
+import app.openscout.scout.ui.components.Segmented
+import app.openscout.scout.ui.components.Tag
+import app.openscout.scout.ui.theme.Scout
+import app.openscout.scout.ui.theme.ScoutType
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,7 +63,7 @@ fun ChatsScreen(vm: AppViewModel, onOpen: (CommsConversation) -> Unit, onNewSess
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        topBar = { ScoutTopBar("Chats", subtitle = "direct messages and channels") },
+        topBar = { ScoutTopBar("Chats") },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = conversations.loading && conversations.data != null,
@@ -64,20 +73,17 @@ fun ChatsScreen(vm: AppViewModel, onOpen: (CommsConversation) -> Unit, onNewSess
             LazyColumn(Modifier.fillMaxSize(), contentPadding = ListContentPadding) {
                 if (link is LinkState.Failed) item { OfflineBanner((link as LinkState.Failed).message, vm::retryNow) }
                 val all = conversations.data
-                if (!all.isNullOrEmpty()) {
-                    item("filters") {
-                        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                            listOf("all" to "All", "direct" to "Direct", "channel" to "Channels").forEach { (key, label) ->
-                                FilterChip(selected = filter == key, onClick = { filter = key }, label = { Text(label) }, modifier = Modifier.padding(end = 8.dp))
-                            }
-                        }
-                    }
-                }
+                val keys = listOf("all", "direct", "channel")
                 val shown = all?.filter {
                     when (filter) {
                         "direct" -> it.kind == "direct" || it.kind == "dm"
                         "channel" -> it.kind != "direct" && it.kind != "dm"
                         else -> true
+                    }
+                }
+                item("head") {
+                    SectionHead("Conversations", count = shown?.size?.toString(), modifier = Modifier.padding(horizontal = 8.dp)) {
+                        Segmented(listOf("All", "Direct", "Channels"), keys.indexOf(filter).coerceAtLeast(0), { filter = keys[it] })
                     }
                 }
                 when {
@@ -92,9 +98,13 @@ fun ChatsScreen(vm: AppViewModel, onOpen: (CommsConversation) -> Unit, onNewSess
                         )
                     }
                     shown.isNullOrEmpty() -> item { QuietLine("Nothing in this filter.") }
-                    else -> items(shown, key = { it.id }) { c ->
-                        ConversationRow(c) { onOpen(c) }
-                        HorizontalDivider(Modifier.padding(start = 76.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    else -> item("list") {
+                        LitBox(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                            shown.forEachIndexed { i, conv ->
+                                if (i > 0) RowRule()
+                                ConversationRow(conv) { onOpen(conv) }
+                            }
+                        }
                     }
                 }
             }
@@ -103,45 +113,26 @@ fun ChatsScreen(vm: AppViewModel, onOpen: (CommsConversation) -> Unit, onNewSess
 }
 
 @Composable
-private fun ConversationRow(c: CommsConversation, onClick: () -> Unit) {
-    val unread = c.unreadCount ?: 0
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val isChannel = c.kind != "direct" && c.kind != "dm"
-        Monogram(
-            if (isChannel) "#" + c.title.removePrefix("#") else c.title,
-            tint = if (isChannel) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    (if (isChannel) "# " else "") + c.title.removePrefix("#").ifBlank { c.id },
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.SemiBold),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                MonoText(relativeTime(c.lastMessageMs))
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val preview = listOfNotNull(c.lastMessageAuthor?.takeIf { it.isNotBlank() }, c.lastMessagePreview?.takeIf { it.isNotBlank() })
-                    .joinToString(": ").ifBlank { c.topic ?: "No messages yet" }
-                Text(
-                    preview,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (unread > 0) {
-                    Spacer(Modifier.width(8.dp))
-                    Box { Badge(containerColor = MaterialTheme.colorScheme.primary) { Text("$unread") } }
-                }
-            }
+private fun ConversationRow(conv: CommsConversation, onClick: () -> Unit) {
+    val c = Scout.colors
+    val unread = conv.unreadCount ?: 0
+    val isChannel = conv.kind != "direct" && conv.kind != "dm"
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 11.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(if (isChannel) "#" else "@", style = ScoutType.mono11, color = c.dim, modifier = Modifier.width(12.dp))
+            Text(
+                conv.title.removePrefix("#").ifBlank { conv.id },
+                style = ScoutType.name.copy(fontSize = ScoutType.prose.fontSize, fontWeight = if (unread > 0) FontWeight.SemiBold else FontWeight.Medium),
+                color = c.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (unread > 0) Tag(unread.toString(), c.signal)
+            Text(relativeTime(conv.lastMessageMs), style = ScoutType.meta, color = c.dim)
         }
+        val preview = listOfNotNull(conv.lastMessageAuthor?.takeIf { it.isNotBlank() }, conv.lastMessagePreview?.takeIf { it.isNotBlank() })
+            .joinToString(": ").ifBlank { conv.topic ?: "No messages yet" }
+        Text(preview, style = ScoutType.bodySmall, color = if (unread > 0) c.body else c.second, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 20.dp, top = 4.dp))
     }
 }

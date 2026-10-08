@@ -1,5 +1,17 @@
 package app.openscout.scout.ui.screens
 
+import app.openscout.scout.ui.components.Harness
+import app.openscout.scout.ui.components.HarnessMark
+import app.openscout.scout.ui.components.Lamp
+import app.openscout.scout.ui.components.LampState
+import app.openscout.scout.ui.components.LitBox
+import app.openscout.scout.ui.components.RowRule
+import app.openscout.scout.ui.components.SectionHead
+import app.openscout.scout.ui.components.Segmented
+import app.openscout.scout.ui.components.Tag
+import app.openscout.scout.ui.theme.ScoutType
+import androidx.compose.foundation.layout.Arrangement
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -96,20 +108,26 @@ fun AgentsScreen(vm: AppViewModel, onOpen: (Agent) -> Unit, onNewSession: () -> 
                         )
                     }
                     else -> {
-                        item("seg") {
-                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                listOf("Recent", "By project").forEachIndexed { i, label ->
-                                    SegmentedButton(selected = grouping == i, onClick = { grouping = i }, shape = SegmentedButtonDefaults.itemShape(i, 2)) { Text(label) }
+                        val sorted = list.sortedWith(compareByDescending<Agent> { it.attention }.thenByDescending { it.liveness == Agent.Liveness.Live }.thenByDescending { it.lastActiveMs ?: 0 })
+                        val groups: List<Pair<String, List<Agent>>> = if (grouping == 0) {
+                            val now = sorted.filter { it.attention || it.liveness == Agent.Liveness.Live }
+                            listOf("Now" to now, "Earlier" to (sorted - now.toSet())).filter { it.second.isNotEmpty() }
+                        } else {
+                            sorted.groupBy { it.projectName ?: "Elsewhere" }.toSortedMap(String.CASE_INSENSITIVE_ORDER).toList()
+                        }
+                        groups.forEachIndexed { gi, (title, members) ->
+                            item("h-$title") {
+                                SectionHead(title, count = members.size.toString(), modifier = Modifier.padding(horizontal = 8.dp)) {
+                                    if (gi == 0) Segmented(listOf("Recent", "Project"), grouping, { grouping = it })
                                 }
                             }
-                        }
-                        val sorted = list.sortedWith(compareByDescending<Agent> { it.attention }.thenByDescending { it.liveness == Agent.Liveness.Live }.thenByDescending { it.lastActiveMs ?: 0 })
-                        if (grouping == 0) {
-                            items(sorted, key = { it.id }) { a -> AgentRow(a) { onOpen(a) } }
-                        } else {
-                            sorted.groupBy { it.projectName ?: "Elsewhere" }.toSortedMap(String.CASE_INSENSITIVE_ORDER).forEach { (project, members) ->
-                                item("h-$project") { SectionHeader(project) }
-                                items(members, key = { "p-" + it.id }) { a -> AgentRow(a) { onOpen(a) } }
+                            item("b-$title") {
+                                LitBox(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                                    members.forEachIndexed { i, a ->
+                                        if (i > 0) RowRule()
+                                        AgentRow(a) { onOpen(a) }
+                                    }
+                                }
                             }
                         }
                     }
@@ -121,35 +139,39 @@ fun AgentsScreen(vm: AppViewModel, onOpen: (Agent) -> Unit, onNewSession: () -> 
 
 @Composable
 private fun AgentRow(agent: Agent, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Monogram(agent.title, tint = livenessColor(agent))
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                    StatusDot(livenessColor(agent), size = 7.dp, pulsing = agent.liveness == Agent.Liveness.Live)
-                    Spacer(Modifier.width(8.dp))
-                    Text(agent.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    harnessLabel(agent.harness)?.let { Spacer(Modifier.width(8.dp)); Chip(it) }
-                }
-                Spacer(Modifier.width(8.dp))
-                MonoText(relativeTime(agent.lastActiveMs))
-            }
-            val line = agent.pendingAskText ?: agent.statusLabel ?: agent.state.replace('_', ' ')
+    val c = Scout.colors
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 11.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Lamp(
+                when {
+                    agent.attention -> LampState.Signal
+                    agent.liveness == Agent.Liveness.Live -> LampState.Live
+                    else -> LampState.Hollow
+                },
+            )
             Text(
-                line,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (agent.attention) Scout.tokens.warn else MaterialTheme.colorScheme.onSurfaceVariant,
+                agent.title,
+                style = ScoutType.name.copy(fontSize = ScoutType.prose.fontSize),
+                color = if (agent.liveness == Agent.Liveness.Offline) c.second else c.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
-            agent.projectName?.let { MonoText(listOfNotNull(it, agent.nodeName).joinToString(" · ")) }
+            if (agent.attention) Tag("asking", c.signal)
+            else Text(relativeTime(agent.lastActiveMs), style = ScoutType.meta, color = c.dim)
+        }
+        Row(Modifier.padding(start = 16.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            HarnessMark(Harness.of(agent.harness))
+            Text(
+                listOfNotNull(agent.projectName, agent.nodeName).joinToString(" · ").ifBlank { agent.selector ?: agent.id },
+                style = ScoutType.mono11, color = c.second, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            )
+        }
+        val line = agent.pendingAskText ?: agent.statusLabel?.takeIf { it.isNotBlank() && !it.equals(agent.state, true) }
+        if (line != null) {
+            Text(line, style = ScoutType.bodySmall, color = if (agent.attention) c.body else c.second, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
         }
     }
-    HorizontalDivider(Modifier.padding(start = 74.dp), color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

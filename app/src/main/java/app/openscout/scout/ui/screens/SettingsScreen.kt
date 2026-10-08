@@ -154,7 +154,7 @@ fun SettingsScreen(vm: AppViewModel, onBack: () -> Unit, onPairAnother: () -> Un
                     ListItem(
                         colors = itemColors,
                         headlineContent = { Text("Wallpaper colors") },
-                        supportingContent = { Text("Use Material You colors instead of Scout's warm palette") },
+                        supportingContent = { Text("Tint Scout's accents with your wallpaper's colors") },
                         trailingContent = { Switch(checked = wallpaper, onCheckedChange = vm.settings::setWallpaperColor) },
                     )
                 }

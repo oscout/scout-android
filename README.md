@@ -27,18 +27,31 @@ broker logic of its own.
 | New session | Pick a project + ready harness + optional first message | `mobile.createSession` |
 | Settings | Paired computers (switch/rename/forget), connection log, appearance | — |
 
-The UI follows [`../ios/DESIGN.md`](../ios/DESIGN.md) in Material idioms:
-warm paper by day and a lit warm cockpit after dark, one emerald accent, a
-status triad, uppercase mono eyebrows, and the chamfered signal panel with
-registration marks for the link readout. Material You (wallpaper) colors are an
-opt-in in Settings.
+The UI speaks the iPhone's current voice, "D · web voice"
+(`design/studio/views/ios-calmer-surfaces.tsx`) with Home from "Home, denser"
+round II (`ios-home-dense.tsx`); the design canvas lives in the "Scout for
+Android" Claude Design artifact. A near-black ground lit from above with a
+little grain, 0.5dp low-alpha hairlines, boxes lit along their top edge, caps
+mono section labels on a long rule, harness marks, raised-plate selection
+(`ios-soft-selection.tsx`), and colour kept for state. Navigation is a drawer
+(Home, Chats, Agents, Ops, Alerts, hosts, Settings), not a tab bar. Dark is the
+default; Light and System are in Settings.
+
+- `ui/theme/Theme.kt` holds the tokens (`Scout.colors`), and maps Material's
+  scheme onto them so stock components sit in the same room.
+- `ui/components/Kit.kt` is the kit: `LitBox`, `SectionHead`, `Lamp`,
+  `Segmented`, `DotMeter`, `HarnessMark`, `BranchPill`, `Tag`, `Glyph`.
+- Home's cockpit reads `mobile.serviceBudgets` (usage dot meters),
+  `mobile.heartrate` (the 7-day activity dots), `mobile.inbox` (waiting on you),
+  `mobile.tail` in `assistant-replies` mode (Moving, built like iOS
+  `HomeMovingSessions`), and `mobile.fleet` activity (Coordination).
 
 ### Build, install, run
 
 ```bash
 cd apps/android
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
-./gradlew testDebugUnitTest      # Noise + pairing payload tests
+./gradlew testDebugUnitTest      # Noise (incl. interop with the bridge's TS responder) + pairing payload tests
 ./gradlew lintDebug
 ./gradlew installDebug           # onto the running emulator / connected device
 adb shell am start -n app.openscout.scout.debug/app.openscout.scout.MainActivity
@@ -98,6 +111,14 @@ real phone you can also just scan the QR from `scout pair` or the Mac app.
 
 To seed something to look at, `scout broadcast "hello"` and
 `scout notify --message "hi"` create a channel and an operator DM.
+
+### Dev tools
+
+- `tools/noise-responder.ts` drives the bridge's own Noise responder over
+  stdin/stdout; `NoiseInteropTest` runs the phone's initiator against it (XX and
+  IK). Needs `bun install` at the repo root, otherwise the test is skipped.
+- `bun apps/android/tools/bridge-probe.ts [path …]` pairs with the local bridge
+  as a throwaway phone and prints `mobile.*` replies, to check wire shapes.
 
 ### Not done yet
 

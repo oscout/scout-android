@@ -10,6 +10,8 @@ import app.openscout.scout.core.model.CommsConversation
 import app.openscout.scout.core.model.CommsMessage
 import app.openscout.scout.core.model.CommsSendResult
 import app.openscout.scout.core.model.FleetSnapshot
+import app.openscout.scout.core.model.Heartrate
+import app.openscout.scout.core.model.ServiceBudgets
 import app.openscout.scout.core.model.Inbox
 import app.openscout.scout.core.model.InboxItem
 import app.openscout.scout.core.model.MessageSendResult
@@ -54,6 +56,17 @@ class ScoutClient(private val connection: BridgeConnection) {
 
     suspend fun tail(limit: Int = 120): List<TailEvent> =
         decode(ListSerializer(TailEvent.serializer()), connection.query("mobile.tail", obj { put("limit", limit) }))
+
+    /** Each harness session's assistant replies over a window: what Home's Moving is built from. */
+    suspend fun tailReplies(limit: Int = 60, windowMs: Long = 24 * 3_600_000L): List<TailEvent> =
+        decode(
+            ListSerializer(TailEvent.serializer()),
+            connection.query("mobile.tail", obj { put("limit", limit); put("mode", "assistant-replies"); put("windowMs", windowMs) }),
+        )
+
+    suspend fun serviceBudgets(): ServiceBudgets = decode(ServiceBudgets.serializer(), connection.query("mobile.serviceBudgets"))
+
+    suspend fun heartrate(): Heartrate = decode(Heartrate.serializer(), connection.query("mobile.heartrate"))
 
     suspend fun inbox(): List<InboxItem> = decode(Inbox.serializer(), connection.query("mobile.inbox")).items
 

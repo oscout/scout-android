@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,30 +25,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CloudOff
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,77 +56,69 @@ import androidx.compose.ui.unit.dp
 import app.openscout.scout.ui.theme.EyebrowStyle
 import app.openscout.scout.ui.theme.MonoDetailStyle
 import app.openscout.scout.ui.theme.Scout
+import app.openscout.scout.ui.theme.ScoutType
 import java.util.Locale
+import kotlin.random.Random
 
-/** The lit canvas: a vertical wash and, after dark, a faint warm key-light from the top edge. */
+/**
+ * A 128px monochrome grain tile, made once per process from a fixed seed with a narrow
+ * mid-grey spread (the iOS grain: 82–175), and laid over the ground at a few percent.
+ */
+private val grainTile: ImageBitmap by lazy {
+    val size = 128
+    val rnd = Random(0x5C0)
+    val pixels = IntArray(size * size) {
+        val v = 82 + rnd.nextInt(94)
+        (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+    }
+    android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+}
+
+/** The lit ground: page colour, light falling from the top edge, and a little grain. */
 @Composable
 fun ScoutCanvas(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    val t = Scout.tokens
+    val c = Scout.colors
+    val grain = remember { ShaderBrush(ImageShader(grainTile, TileMode.Repeated, TileMode.Repeated)) }
     Box(
         modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(t.canvasTop, MaterialTheme.colorScheme.background, t.canvasFloor)))
             .drawBehind {
-                if (t.isDark) {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(t.keyLight.copy(alpha = 0.07f), Color.Transparent),
-                            center = Offset(size.width / 2f, 0f),
-                            radius = 380.dp.toPx(),
-                        ),
-                        radius = 380.dp.toPx(),
-                        center = Offset(size.width / 2f, 0f),
-                    )
-                }
+                drawRect(c.page)
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(c.keyLight, Color.Transparent),
+                        center = Offset(size.width / 2f, -size.height * 0.06f),
+                        radius = size.width * 1.25f,
+                    ),
+                )
+                drawRect(grain, alpha = if (c.isDark) 0.07f else 0.05f, blendMode = if (c.isDark) BlendMode.Overlay else BlendMode.Multiply)
             },
     ) {
-        // The canvas is not a Surface, so set the content color explicitly; otherwise
-        // un-tinted Text/Icons fall back to black and vanish in Dark.
-        androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground,
-        ) { content() }
+        // The canvas is not a Surface, so set the content colour explicitly.
+        CompositionLocalProvider(LocalContentColor provides c.ink) { content() }
     }
 }
 
 @Composable
-fun Eyebrow(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+fun Eyebrow(text: String, modifier: Modifier = Modifier, color: Color = Scout.colors.ink) {
     Text(text.uppercase(Locale.ROOT), style = EyebrowStyle, color = color, modifier = modifier, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
+/** A list screen's section head: caps label, a long hairline, an optional trailing control. */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier, trailing: @Composable (() -> Unit)? = null) {
-    Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 20.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Eyebrow(title, Modifier.weight(1f))
-        trailing?.invoke()
-    }
+    SectionHead(title, modifier = modifier.padding(horizontal = 12.dp)) { trailing?.invoke() }
 }
 
-/** Genuine container card: lifted surface with a solid edge (never a white-alpha hairline). */
+/** A genuine container: the lit box with 14dp of padding. */
 @Composable
 fun ScoutCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    val t = Scout.tokens
-    val shape = RoundedCornerShape(8.dp)
-    Column(
-        modifier
-            .shadow(if (t.isDark) 6.dp else 2.dp, shape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f))
-            .clip(shape)
-            .background(
-                if (t.isDark) Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.surfaceContainerLow))
-                else Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surfaceContainerLowest, MaterialTheme.colorScheme.surfaceContainerLowest)),
-            )
-            .border(1.dp, Brush.verticalGradient(listOf(t.edge, MaterialTheme.colorScheme.outlineVariant)), shape)
-            .padding(14.dp),
-        content = content,
-    )
+    LitBox(modifier) { Column(Modifier.padding(14.dp), content = content) }
 }
 
 /**
- * The signature signal panel: a chamfered eight-sided plate with four corner
- * registration marks and one datum line that carries state. The accent reaches
- * the marks and datum only — it never washes the panel.
+ * Was the chamfered signal panel. The D voice retires the chamfer and marks: a lit box
+ * whose state is carried by one lamp and a short datum on the top edge.
  */
 @Composable
 fun SignalPanel(
@@ -134,71 +127,46 @@ fun SignalPanel(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val t = Scout.tokens
-    val neutral = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-    val markColor = if (active) accent else neutral
-    val shape = CutCornerShape(6.dp)
-    val top = if (t.isDark) Color(0xFF131516) else Color(0xFFFFFEFA)
-    val bottom = if (t.isDark) Color(0xFF0B0D0E) else Color(0xFFF3EFE7)
-    val edge = if (t.isDark) Color(0xFF3A3E3F) else Color(0xFFC3BCB0)
-    Column(
-        modifier
-            .shadow(3.dp, shape, ambientColor = Color.Black.copy(alpha = 0.24f), spotColor = Color.Black.copy(alpha = 0.24f))
-            .clip(shape)
-            .background(Brush.verticalGradient(listOf(top, bottom)))
-            .border(1.dp, edge, shape)
-            .drawBehind {
-                val arm = 9.dp.toPx()
-                val inset = 4.dp.toPx()
-                val stroke = 1.dp.toPx()
-                val c = markColor.copy(alpha = 0.82f)
-                val w = size.width
-                val h = size.height
-                // Corner registration marks.
-                listOf(
-                    Offset(inset, inset) to Offset(1f, 1f),
-                    Offset(w - inset, inset) to Offset(-1f, 1f),
-                    Offset(inset, h - inset) to Offset(1f, -1f),
-                    Offset(w - inset, h - inset) to Offset(-1f, -1f),
-                ).forEach { (o, d) ->
-                    drawLine(c, o, Offset(o.x + d.x * arm, o.y), stroke)
-                    drawLine(c, o, Offset(o.x, o.y + d.y * arm), stroke)
-                }
-                // Datum line, top-left: 18dp neutral idle, 30dp accent when active.
-                val datumWidth = (if (active) 30.dp else 18.dp).toPx()
-                drawRect(markColor, topLeft = Offset(inset + arm + 6.dp.toPx(), inset), size = Size(datumWidth, stroke * 1.5f))
-            }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        content = content,
-    )
+    val c = Scout.colors
+    LitBox(modifier) {
+        Box(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), content = content)
+            Box(
+                Modifier.padding(start = 14.dp).width(if (active) 30.dp else 18.dp).height(1.5.dp)
+                    .background(if (active) accent else c.dim.copy(alpha = 0.6f)),
+            )
+        }
+    }
 }
 
 @Composable
-fun StatusDot(color: Color, modifier: Modifier = Modifier, size: Dp = 8.dp, pulsing: Boolean = false) {
+fun StatusDot(color: Color, modifier: Modifier = Modifier, size: Dp = 6.dp, pulsing: Boolean = false) {
     val alpha = if (pulsing) {
         val transition = rememberInfiniteTransition(label = "pulse")
         val a by transition.animateFloat(0.45f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "a")
         a
     } else 1f
-    Box(modifier.size(size).clip(CircleShape).background(color.copy(alpha = alpha)))
+    val glow = Scout.colors.isDark
+    Canvas(modifier.size(size)) {
+        if (glow) drawCircle(color.copy(alpha = 0.22f * alpha), radius = this.size.minDimension)
+        drawCircle(color.copy(alpha = alpha))
+    }
 }
 
+/** An outlined mono pill: harness, kind, branch-like facts. */
 @Composable
-fun Chip(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(3.dp),
-        color = Scout.tokens.inset,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Text(
-            text.uppercase(Locale.ROOT),
-            style = EyebrowStyle.copy(letterSpacing = EyebrowStyle.letterSpacing * 0.6f),
-            color = color,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-            maxLines = 1,
-        )
-    }
+fun Chip(text: String, modifier: Modifier = Modifier, color: Color = Scout.colors.second) {
+    val c = Scout.colors
+    Text(
+        text.lowercase(Locale.ROOT),
+        style = ScoutType.micro,
+        color = color,
+        maxLines = 1,
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .border(Hairline, if (color == c.second) c.line else color.copy(alpha = 0.5f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 7.dp, vertical = 2.dp),
+    )
 }
 
 @Composable
@@ -209,21 +177,22 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null,
 ) {
+    val c = Scout.colors
     Column(
         modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
-            Modifier.size(56.dp).clip(CutCornerShape(10.dp)).background(Scout.tokens.inset)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CutCornerShape(10.dp)),
+            Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).border(Hairline, c.line, RoundedCornerShape(10.dp))
+                .background(Brush.verticalGradient(listOf(c.boxTop, Color.Transparent))),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(icon, null, tint = c.second, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.height(4.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        Text(title, style = ScoutType.name.copy(fontSize = ScoutType.prose.fontSize), color = c.ink, textAlign = TextAlign.Center)
+        Text(body, style = ScoutType.bodySmall, color = c.second, textAlign = TextAlign.Center)
         if (action != null) {
             Spacer(Modifier.height(6.dp))
             action()
@@ -231,103 +200,94 @@ fun EmptyState(
     }
 }
 
-/** Connection problem banner with a retry; shown above content that may be stale. */
+/** The host didn't answer: one quiet line with a signal lamp and Retry. Content below may be stale. */
 @Composable
 fun OfflineBanner(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier, retrying: Boolean = false) {
-    Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = CutCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-    ) {
-        Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.CloudOff, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.weight(1f))
-            androidx.compose.material3.TextButton(onClick = onRetry, enabled = !retrying) {
-                Text(if (retrying) "Retrying…" else "Retry")
-            }
+    val c = Scout.colors
+    Column(modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp).defaultMinSize(minHeight = 44.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Lamp(LampState.Signal)
+            Text(message, style = ScoutType.bodySmall, color = c.body, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                if (retrying) "Retrying…" else "Retry",
+                style = ScoutType.name,
+                color = c.ink,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = !retrying, role = Role.Button, onClick = onRetry)
+                    .defaultMinSize(minHeight = 44.dp).padding(horizontal = 12.dp, vertical = 12.dp),
+            )
         }
+        RowRule()
     }
 }
 
 @Composable
 fun InlineError(message: String, modifier: Modifier = Modifier) {
-    Text(
-        message,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.error,
-        modifier = modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-    )
+    Text(message, style = ScoutType.bodySmall, color = Scout.colors.danger, modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp))
 }
 
 @Composable
-fun MonoText(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines: Int = 1) {
+fun MonoText(text: String, modifier: Modifier = Modifier, color: Color = Scout.colors.second, maxLines: Int = 1) {
     Text(text, style = MonoDetailStyle, color = color, modifier = modifier, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
-/** Initials avatar on an inset plate. */
+/** Initials on a quiet tile, for people and agents without a harness mark. */
 @Composable
-fun Monogram(name: String, modifier: Modifier = Modifier, tint: Color = MaterialTheme.colorScheme.primary, size: Dp = 40.dp) {
+fun Monogram(name: String, modifier: Modifier = Modifier, tint: Color = Scout.colors.second, size: Dp = 32.dp) {
+    val c = Scout.colors
     val letters = name.split(' ', '-', '_', '.', '/').filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
         .ifEmpty { "?" }
     Box(
-        modifier.size(size).clip(RoundedCornerShape(8.dp)).background(tint.copy(alpha = 0.14f))
-            .border(1.dp, tint.copy(alpha = 0.28f), RoundedCornerShape(8.dp)),
+        modifier.size(size).clip(RoundedCornerShape(8.dp)).border(Hairline, c.line, RoundedCornerShape(8.dp))
+            .background(Brush.verticalGradient(listOf(c.boxTop, Color.Transparent))),
         contentAlignment = Alignment.Center,
     ) {
-        Text(letters, style = EyebrowStyle.copy(fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.labelLarge.fontSize), color = tint)
+        Text(letters, style = ScoutType.small.copy(fontWeight = FontWeight.SemiBold), color = tint)
     }
 }
 
-/** The Scout mark: a pointy hex with a lit facet, drawn — no bitmap. */
+/** The Scout hex mark, in ink. */
 @Composable
-fun ScoutMark(modifier: Modifier = Modifier, size: Dp = 28.dp, color: Color = MaterialTheme.colorScheme.primary) {
-    Canvas(modifier.size(size)) {
-        val w = this.size.width
-        val h = this.size.height
-        val path = Path().apply {
-            moveTo(w * 0.5f, 0f)
-            lineTo(w, h * 0.25f)
-            lineTo(w, h * 0.75f)
-            lineTo(w * 0.5f, h)
-            lineTo(0f, h * 0.75f)
-            lineTo(0f, h * 0.25f)
-            close()
-        }
-        drawPath(path, Brush.linearGradient(listOf(color, app.openscout.scout.ui.theme.AccentTail), Offset.Zero, Offset(w, h)))
-        val inner = Path().apply {
-            moveTo(w * 0.5f, h * 0.28f)
-            lineTo(w * 0.72f, h * 0.4f)
-            lineTo(w * 0.72f, h * 0.62f)
-            lineTo(w * 0.5f, h * 0.74f)
-            lineTo(w * 0.28f, h * 0.62f)
-            lineTo(w * 0.28f, h * 0.4f)
-            close()
-        }
-        drawPath(inner, Color.White.copy(alpha = 0.92f), style = Stroke(width = w * 0.07f))
-        drawCircle(Color.White, radius = w * 0.07f, center = Offset(w * 0.5f, h * 0.51f))
-    }
+fun ScoutMark(modifier: Modifier = Modifier, size: Dp = 20.dp, color: Color = Scout.colors.ink) {
+    Box(modifier) { HexMark(size, color) }
 }
 
+/** The primary action: a raised plate (ios-soft-selection), never a bright fill. */
 @Composable
 fun PrimaryAction(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) {
-    Button(onClick = onClick, modifier = modifier.height(52.dp), enabled = enabled, shape = RoundedCornerShape(8.dp)) {
-        if (icon != null) {
-            Icon(icon, null, Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-        }
-        Text(text, style = MaterialTheme.typography.titleSmall)
-    }
+    ActionButton(text, ButtonTone.Plate, onClick, modifier.defaultMinSize(minHeight = 48.dp), enabled, icon)
 }
 
 @Composable
 fun SecondaryAction(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) {
-    OutlinedButton(onClick = onClick, modifier = modifier.height(52.dp), enabled = enabled, shape = RoundedCornerShape(8.dp)) {
+    ActionButton(text, ButtonTone.Outline, onClick, modifier.defaultMinSize(minHeight = 48.dp), enabled, icon)
+}
+
+@Composable
+private fun ActionButton(text: String, tone: ButtonTone, onClick: () -> Unit, modifier: Modifier, enabled: Boolean, icon: ImageVector?) {
+    val c = Scout.colors
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        modifier
+            .clip(shape)
+            .then(
+                if (tone == ButtonTone.Plate) Modifier.background(Brush.verticalGradient(listOf(c.plateTop, c.plateBottom)))
+                else Modifier.border(Hairline, c.line, shape),
+            )
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val tint = (if (tone == ButtonTone.Plate) c.plateText else c.body).copy(alpha = if (enabled) 1f else 0.4f)
         if (icon != null) {
-            Icon(icon, null, Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
+            Icon(icon, null, Modifier.size(18.dp), tint = tint)
+            Spacer(Modifier.width(8.dp))
         }
-        Text(text, style = MaterialTheme.typography.titleSmall)
+        Text(text, style = ScoutType.name.copy(fontSize = ScoutType.prose.fontSize), color = tint)
     }
 }
 
@@ -338,7 +298,7 @@ fun relativeTime(ms: Long?, now: Long = System.currentTimeMillis()): String {
     val diff = (now - ms).coerceAtLeast(0)
     val s = diff / 1000
     return when {
-        s < 60 -> "now"
+        s < 60 -> "${s}s"
         s < 3600 -> "${s / 60}m"
         s < 86_400 -> "${s / 3600}h"
         s < 7 * 86_400 -> "${s / 86_400}d"
@@ -358,3 +318,4 @@ fun harnessLabel(harness: String?): String? = when (harness?.lowercase()) {
     "gemini" -> "Gemini"
     else -> harness.replaceFirstChar { it.uppercase() }
 }
+

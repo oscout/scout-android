@@ -266,7 +266,59 @@ data class FleetWorkItem(
 data class FleetSnapshot(
     val activeAsks: List<FleetWorkItem> = emptyList(),
     val recentCompleted: List<FleetWorkItem> = emptyList(),
+    val activity: List<FleetActivity> = emptyList(),
 )
+
+/** One line of the fleet's coordination stream (messages, asks, flights). */
+@Serializable
+data class FleetActivity(
+    val id: String,
+    val kind: String = "",
+    val ts: Long = 0,
+    val actorId: String? = null,
+    val actorName: String? = null,
+    val actorHarness: String? = null,
+    val title: String = "",
+    val summary: String? = null,
+    val conversationId: String? = null,
+    val agentId: String? = null,
+    val sessionId: String? = null,
+    val workspaceRoot: String? = null,
+) {
+    val tsMs: Long get() = epochMillis(ts) ?: 0
+    val isAsk: Boolean get() = kind.contains("ask") || kind.contains("question")
+}
+
+/** `mobile.serviceBudgets`: subscription windows per provider (5h, 7d, …). */
+@Serializable
+data class ServiceBudgets(val budgets: List<ServiceBudget> = emptyList())
+
+@Serializable
+data class ServiceBudget(
+    val provider: String,
+    val label: String = "",
+    val plan: String? = null,
+    val windows: List<BudgetWindow> = emptyList(),
+)
+
+@Serializable
+data class BudgetWindow(
+    val label: String,
+    val usedPercent: Double = 0.0,
+    val reset: String? = null,
+    val resetAt: Long? = null,
+)
+
+/** `mobile.heartrate`: fleet velocity over a trailing week, normalised 0..1 per bucket. */
+@Serializable
+data class Heartrate(
+    val windowLabel: String = "",
+    val bucketLabel: String = "",
+    val buckets: List<HeartrateBucket> = emptyList(),
+)
+
+@Serializable
+data class HeartrateBucket(val ts: Long = 0, val count: Int = 0, val value: Double = 0.0)
 
 @Serializable
 data class SessionHandleAgent(val id: String, val title: String = "")

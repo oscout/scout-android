@@ -1,5 +1,22 @@
 package app.openscout.scout.ui.screens
 
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import app.openscout.scout.ui.components.Glyph
+import app.openscout.scout.ui.components.Glyphs
+import app.openscout.scout.ui.components.Hairline
+import app.openscout.scout.ui.components.Lamp
+import app.openscout.scout.ui.components.LampState
+import app.openscout.scout.ui.components.LitBox
+import app.openscout.scout.ui.theme.ScoutType
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -81,7 +98,8 @@ fun ThreadScreen(vm: AppViewModel, conversationId: String?, title: String, agent
                 title = title,
                 subtitle = when {
                     t?.lifecycle != null -> t.lifecycle.replace('_', ' ')
-                    t?.conversationId != null -> t.conversationId
+                    agentId != null || t?.conversationId?.startsWith("dm") == true -> "direct"
+                    t?.conversationId != null -> "channel"
                     else -> "new direct message"
                 },
                 onBack = onBack,
@@ -89,29 +107,37 @@ fun ThreadScreen(vm: AppViewModel, conversationId: String?, title: String, agent
             )
         },
         bottomBar = {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.navigationBarsPadding().imePadding()) {
-                    t?.sendError?.let { InlineError(it) }
-                    Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.Bottom) {
-                        OutlinedTextField(
+            val c = Scout.colors
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 8.dp)) {
+                t?.sendError?.let { InlineError(it) }
+                LitBox(Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.Bottom) {
+                        TextField(
                             value = draft,
                             onValueChange = { draft = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text(if (agentId != null) "Message $title" else "Message") },
+                            placeholder = { Text(if (agentId != null) "Message $title…" else "Message…", style = ScoutType.prose, color = c.dim) },
+                            textStyle = ScoutType.prose.copy(color = c.ink),
                             maxLines = 6,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = Scout.tokens.inset,
-                                focusedContainerColor = Scout.tokens.inset,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                cursorColor = c.ink,
                             ),
                         )
-                        Spacer(Modifier.size(8.dp))
-                        FilledIconButton(
-                            onClick = { vm.send(draft); draft = "" },
-                            enabled = draft.isNotBlank() && link is LinkState.Connected,
-                            modifier = Modifier.size(52.dp),
-                            shape = RoundedCornerShape(8.dp),
-                        ) { Icon(Icons.AutoMirrored.Filled.Send, "Send") }
+                        val canSend = draft.isNotBlank() && link is LinkState.Connected
+                        Box(
+                            Modifier.padding(bottom = 4.dp).size(44.dp).clip(RoundedCornerShape(8.dp))
+                                .background(Brush.verticalGradient(listOf(c.plateTop, c.plateBottom)))
+                                .clickable(enabled = canSend, role = Role.Button) { vm.send(draft); draft = "" }
+                                .semantics { contentDescription = "Send" },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Glyph(Glyphs.SEND, size = 16.dp, color = c.plateText.copy(alpha = if (canSend) 1f else 0.35f), stroke = 1.4f)
+                        }
                     }
                 }
             }
@@ -153,49 +179,38 @@ fun ThreadScreen(vm: AppViewModel, conversationId: String?, title: String, agent
 
 @Composable
 private fun MessageBubble(m: CommsMessage, showAuthor: Boolean, pending: Boolean) {
+    val c = Scout.colors
     val mine = m.fromOperator
-    val shape = RoundedCornerShape(
-        topStart = 10.dp, topEnd = 10.dp,
-        bottomStart = if (mine) 10.dp else 3.dp,
-        bottomEnd = if (mine) 3.dp else 10.dp,
-    )
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = if (showAuthor) 4.dp else 0.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = if (showAuthor) 6.dp else 0.dp),
         horizontalAlignment = if (mine) Alignment.End else Alignment.Start,
     ) {
-        if (showAuthor) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
-                if (!mine) {
-                    StatusDot(
-                        if (m.authorKind == "system") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-                        size = 6.dp,
-                    )
-                    Spacer(Modifier.size(6.dp))
-                }
-                Eyebrow(if (mine) "You" else m.authorLabel.ifBlank { m.actorId })
-                Spacer(Modifier.size(8.dp))
-                MonoText(if (pending) "sending…" else relativeTime(m.createdMs))
+        if (showAuthor && !mine) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                Lamp(if (m.authorKind == "system") LampState.Hollow else LampState.Live)
+                Text(m.authorLabel.ifBlank { m.actorId }, style = ScoutType.nameSmall, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(relativeTime(m.createdMs), style = ScoutType.meta, color = c.dim)
             }
         }
-        val bg = if (mine) MaterialTheme.colorScheme.primary.copy(alpha = if (Scout.tokens.isDark) 0.22f else 0.12f)
-        else if (Scout.tokens.isDark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLowest
-        Box(
-            Modifier.widthIn(max = 320.dp)
-                .background(bg, shape)
-                .border(1.dp, if (mine) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outlineVariant, shape)
-                .padding(horizontal = 12.dp, vertical = 9.dp),
-        ) {
-            SelectionContainer {
-                Text(
-                    m.body,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (pending) 0.6f else 1f),
-                )
+        if (mine) {
+            val shape = RoundedCornerShape(10.dp)
+            Box(
+                Modifier.widthIn(max = 300.dp)
+                    .clip(shape)
+                    .background(Brush.verticalGradient(listOf(c.popTop, c.popBottom)))
+                    .border(Hairline, c.line, shape)
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+            ) {
+                SelectionContainer { Text(m.body, style = ScoutType.prose, color = c.ink.copy(alpha = if (pending) 0.55f else 1f)) }
             }
+            if (showAuthor || pending) {
+                Text(if (pending) "sending…" else relativeTime(m.createdMs), style = ScoutType.meta, color = c.dim, modifier = Modifier.padding(top = 3.dp, end = 2.dp))
+            }
+        } else {
+            SelectionContainer { Text(m.body, style = ScoutType.prose, color = c.body, modifier = Modifier.padding(start = 13.dp)) }
         }
         if (!m.attachments.isNullOrEmpty()) {
-            Spacer(Modifier.height(4.dp))
-            MonoText("${m.attachments.size} attachment(s) · open on your computer")
+            Text("${m.attachments.size} attachment(s) · open on your computer", style = ScoutType.meta, color = c.dim, modifier = Modifier.padding(start = 13.dp, top = 4.dp))
         }
     }
 }

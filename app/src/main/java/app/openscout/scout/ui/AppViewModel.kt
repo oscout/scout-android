@@ -15,6 +15,9 @@ import app.openscout.scout.core.model.ActivityItem
 import app.openscout.scout.core.model.Agent
 import app.openscout.scout.core.model.CommsConversation
 import app.openscout.scout.core.model.CommsMessage
+import app.openscout.scout.core.model.FleetSnapshot
+import app.openscout.scout.core.model.Heartrate
+import app.openscout.scout.core.model.ServiceBudgets
 import app.openscout.scout.core.model.InboxItem
 import app.openscout.scout.core.model.MobileHome
 import app.openscout.scout.core.model.TailEvent
@@ -93,6 +96,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val tail: StateFlow<Loadable<List<TailEvent>>> = _tail.asStateFlow()
     private val _agentActivity = MutableStateFlow<Pair<String, Loadable<List<ActivityItem>>>?>(null)
     val agentActivity: StateFlow<Pair<String, Loadable<List<ActivityItem>>>?> = _agentActivity.asStateFlow()
+
+    // Home's cockpit: usage windows, fleet velocity, coordination, and assistant replies for Moving.
+    private val _budgets = MutableStateFlow(Loadable<ServiceBudgets>())
+    val budgets: StateFlow<Loadable<ServiceBudgets>> = _budgets.asStateFlow()
+    private val _heartrate = MutableStateFlow(Loadable<Heartrate>())
+    val heartrate: StateFlow<Loadable<Heartrate>> = _heartrate.asStateFlow()
+    private val _fleet = MutableStateFlow(Loadable<FleetSnapshot>())
+    val fleet: StateFlow<Loadable<FleetSnapshot>> = _fleet.asStateFlow()
+    private val _replies = MutableStateFlow(Loadable<List<TailEvent>>())
+    val replies: StateFlow<Loadable<List<TailEvent>>> = _replies.asStateFlow()
 
     private val _thread = MutableStateFlow<ThreadUi?>(null)
     val thread: StateFlow<ThreadUi?> = _thread.asStateFlow()
@@ -243,6 +256,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun clearData() {
         _home.value = Loadable(); _activity.value = Loadable(); _inbox.value = Loadable()
         _conversations.value = Loadable(); _agents.value = Loadable(); _tail.value = Loadable()
+        _budgets.value = Loadable(); _heartrate.value = Loadable(); _fleet.value = Loadable(); _replies.value = Loadable()
         _thread.value = null
     }
 
@@ -250,6 +264,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshAll() {
         refreshHome(); refreshActivity(); refreshInbox(); refreshConversations(); refreshAgents()
+        refreshCockpit()
+    }
+
+    /** Side by side, like iOS: usage, velocity, fleet and replies each paint as they land. */
+    fun refreshCockpit() {
+        load(_budgets) { client.serviceBudgets() }
+        load(_heartrate) { client.heartrate() }
+        load(_fleet) { client.fleet(30) }
+        load(_replies) { client.tailReplies(60) }
     }
 
     private fun friendly(e: Throwable): String = when (e) {
@@ -296,7 +319,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         changeDebounce?.cancel()
         changeDebounce = viewModelScope.launch {
             delay(400)
-            refreshConversations(); refreshActivity()
+            refreshConversations(); refreshActivity(); load(_fleet) { client.fleet(30) }
         }
     }
 
