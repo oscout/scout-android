@@ -46,10 +46,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.openscout.scout.ui.components.EmptyState
 import app.openscout.scout.ui.components.PrimaryAction
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
+import androidx.camera.core.ImageProxy
+import app.openscout.scout.core.pairing.QrLuma
+import com.google.zxing.qrcode.QRCodeReader
 import java.util.concurrent.Executors
 
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -81,26 +80,17 @@ fun ScanScreen(onResult: (String) -> Unit, onBack: () -> Unit) {
                     providerFuture.addListener({
                         val provider = providerFuture.get()
                         val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
-                        val scanner = BarcodeScanning.getClient(
-                            BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build(),
-                        )
+                        val reader = QRCodeReader()
                         val analysis = ImageAnalysis.Builder()
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()
                         analysis.setAnalyzer(executor) { proxy ->
-                            val media = proxy.image
-                            if (media == null || delivered) {
-                                proxy.close(); return@setAnalyzer
+                            val value = if (delivered) null else decodeQr(reader, proxy)
+                            proxy.close()
+                            if (value != null && !delivered && (value.contains("pair") || value.trim().startsWith("{"))) {
+                                delivered = true
+                                ContextCompat.getMainExecutor(ctx).execute { onResult(value) }
                             }
-                            scanner.process(InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees))
-                                .addOnSuccessListener { codes ->
-                                    val value = codes.firstNotNullOfOrNull { it.rawValue }
-                                    if (value != null && !delivered && (value.contains("pair") || value.trim().startsWith("{"))) {
-                                        delivered = true
-                                        ContextCompat.getMainExecutor(ctx).execute { onResult(value) }
-                                    }
-                                }
-                                .addOnCompleteListener { proxy.close() }
                         }
                         runCatching {
                             provider.unbindAll()
@@ -146,4 +136,12 @@ fun ScanScreen(onResult: (String) -> Unit, onBack: () -> Unit) {
             colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.4f), contentColor = Color.White),
         ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
     }
+}
+
+/** Reads a QR code from a camera frame's luma (Y) plane. */
+private fun decodeQr(reader: QRCodeReader, frame: ImageProxy): String? {
+    val plane = frame.planes.firstOrNull() ?: return null
+    val buffer = plane.buffer.duplicate().apply { rewind() }
+    val luma = ByteArray(buffer.remaining()).also(buffer::get)
+    return QrLuma.decode(reader, luma, plane.rowStride, frame.width, frame.height)
 }

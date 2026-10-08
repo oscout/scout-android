@@ -16,7 +16,7 @@ broker logic of its own.
 
 | Screen | What it shows | Bridge procedures |
 | --- | --- | --- |
-| Pair | QR scan (CameraX + ML Kit), paste a pairing link, deep links | relay + Noise XX |
+| Pair | QR scan (CameraX + ZXing), paste a pairing link, deep links | relay + Noise XX |
 | Home | Link signal panel, counts, "Needs you", activity, projects | `mobile.home`, `mobile.activity`, `mobile.inbox` |
 | Chats | DMs and channels, unread badges, filters | `mobile.commsConversations` |
 | Thread | Messages, composer, optimistic send, mark read, live refresh | `mobile.commsMessages`, `mobile.commsSend`, `mobile.sendMessage`, `mobile.commsMarkRead` |
