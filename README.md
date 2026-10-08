@@ -6,6 +6,14 @@ computer's pairing bridge exactly like iOS does (same QR payload, same
 `scout://pair` link, same Noise handshake, same tRPC procedures) and holds no
 broker logic of its own.
 
+<p align="center"><img src="docs/demo.gif" width="300" alt="Scout for Android: Home, Agents, Chats, a thread, the drawer and Ops"></p>
+
+| Home | Drawer | Agents | Chats |
+|---|---|---|---|
+| <img src="docs/screenshots/01-home.png" width="200" alt="Home"> | <img src="docs/screenshots/02-drawer.png" width="200" alt="Drawer"> | <img src="docs/screenshots/03-agents.png" width="200" alt="Agents"> | <img src="docs/screenshots/04-chats.png" width="200" alt="Chats"> |
+| **Thread** | **Ops** | **Alerts** | **Settings** |
+| <img src="docs/screenshots/05-thread.png" width="200" alt="Thread"> | <img src="docs/screenshots/06-ops.png" width="200" alt="Ops"> | <img src="docs/screenshots/07-alerts.png" width="200" alt="Alerts"> | <img src="docs/screenshots/08-settings.png" width="200" alt="Settings"> |
+
 - Kotlin + Jetpack Compose + Material 3, single activity, edge-to-edge, light/dark
 - Package id `app.openscout.scout` (`.debug` suffix for debug builds), mirroring
   the iOS bundle id
