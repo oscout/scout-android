@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scout mark: a pointy hex with a lit facet, centered in the 66dp safe zone of the 108dp adaptive canvas. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M54,27 L77,40.5 L77,67.5 L54,81 L31,67.5 L31,40.5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="31"
+                android:startY="27"
+                android:endX="77"
+                android:endY="81">
+                <item android:offset="0" android:color="#FF2FCB94" />
+                <item android:offset="1" android:color="#FF0BC5A5" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,42 L64,48 L64,60 L54,66 L44,60 L44,48 Z"
+        android:strokeWidth="3.2"
+        android:strokeColor="#F2FFFFFF" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M50.8,54 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0" />
+</vector>
